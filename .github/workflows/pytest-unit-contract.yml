@@ -3,11 +3,6 @@ name: pytest-unit-contract
 on:
   pull_request:
   push:
-    branches:
-      - main
-      - master
-      - develop
-      - test_pytest
   workflow_dispatch:
 
 jobs:
@@ -37,3 +32,58 @@ jobs:
 
       - name: Run unit/contract pytest suite
         run: pytest -q tests/unit_contract
+
+  pytest-feature-groups:
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - eng
+          - ukr
+    env:
+      PYTHONUNBUFFERED: "1"
+      HF_HOME: ~/.cache/huggingface
+      TOKENIZERS_PARALLELISM: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            requirements-feature-groups.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Cache Hugging Face and NLTK data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/nltk_data
+          key: ${{ runner.os }}-py310-feature-groups-v1
+
+      - name: Install feature-group dependencies
+        run: python -m pip install -r requirements-feature-groups.txt
+
+      - name: Install spaCy language models
+        run: |
+          python -m spacy download en_core_web_sm
+          python -m spacy download uk_core_news_sm
+
+      - name: Download NLTK resources
+        run: |
+          python - <<'PY'
+          import nltk
+          nltk.download("punkt")
+          nltk.download("averaged_perceptron_tagger")
+          PY
+
+      - name: Run feature-group integrity suite
+        run: pytest -q tests/feature_groups/test_feature_group_integrity_${{ matrix.language }}.py

@@ -1,0 +1,3 @@
+-r requirements-test.txt
+-r openwillis/openwillis-speech/requirements.txt
+torch

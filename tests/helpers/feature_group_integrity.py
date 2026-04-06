@@ -12,10 +12,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 OPENWILLIS_SRC = REPO_ROOT / "openwillis" / "openwillis-speech" / "src"
 FEATURE_GROUP_ROOT = REPO_ROOT / "tests" / "data" / "feature_groups"
 SOURCE_FIXTURE_ROOTS = {
-    "eng": REPO_ROOT / "tmp" / "role_labeled_whisper_like_stub_batch_eng_26-03-2026",
-    "ukr": REPO_ROOT / "tmp" / "role_labeled_whisper_like_stub_batch_ukr_26-03-2026",
+    "en": REPO_ROOT / "tmp" / "role_labeled_whisper_like_stub_batch_eng_26-03-2026",
+    "ua": REPO_ROOT / "tmp" / "role_labeled_whisper_like_stub_batch_ukr_26-03-2026",
 }
-PIPELINE_LANGUAGES = {"eng": "en", "ukr": "uk"}
+PIPELINE_LANGUAGES = {"en": "en", "ua": "uk"}
 PARTICIPANT_LABEL = "participant"
 MATTR_COLUMNS = ["mattr_5", "mattr_10", "mattr_25", "mattr_50", "mattr_100"]
 WORD_COHERENCE_COLUMNS = [

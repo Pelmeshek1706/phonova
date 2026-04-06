@@ -10,12 +10,22 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OPENWILLIS_SRC = REPO_ROOT / "openwillis" / "openwillis-speech" / "src"
-FEATURE_GROUP_ROOT = REPO_ROOT / "tests" / "data" / "feature_groups"
-SOURCE_FIXTURE_ROOTS = {
-    "en": REPO_ROOT / "tmp" / "role_labeled_whisper_like_stub_batch_eng_26-03-2026",
-    "ua": REPO_ROOT / "tmp" / "role_labeled_whisper_like_stub_batch_ukr_26-03-2026",
+TEST_DATA_ROOT = REPO_ROOT / "tests" / "data"
+LANGUAGE_ALIASES = {
+    "en": "eng",
+    "eng": "eng",
+    "ua": "ukr",
+    "uk": "ukr",
+    "ukr": "ukr",
 }
-PIPELINE_LANGUAGES = {"en": "en", "ua": "uk"}
+CANONICAL_PIPELINE_LANGUAGES = {
+    "eng": "en",
+    "ukr": "uk",
+}
+TEST_FIXTURE_ROOTS = {
+    "eng": TEST_DATA_ROOT / "role_labeled_whisper_like_stub_batch_eng_26-03-2026",
+    "ukr": TEST_DATA_ROOT / "role_labeled_whisper_like_stub_batch_ukr_26-03-2026",
+}
 PARTICIPANT_LABEL = "participant"
 MATTR_COLUMNS = ["mattr_5", "mattr_10", "mattr_25", "mattr_50", "mattr_100"]
 WORD_COHERENCE_COLUMNS = [
@@ -42,16 +52,19 @@ TURN_OPTIONAL_COLUMNS = [
 ]
 
 
+def _normalize_language(language):
+    normalized = str(language).strip().lower()
+    if normalized not in LANGUAGE_ALIASES:
+        raise KeyError(f"Unsupported feature-group language: {language}")
+    return LANGUAGE_ALIASES[normalized]
+
+
 def _fixture_path(language):
-    tracked_path = FEATURE_GROUP_ROOT / language / "300.json"
-    if tracked_path.exists():
-        return tracked_path
-
-    fallback_path = SOURCE_FIXTURE_ROOTS[language] / "300.json"
-    if fallback_path.exists():
-        return fallback_path
-
-    raise FileNotFoundError(f"Missing feature-group fixture for {language}: {tracked_path}")
+    canonical_language = _normalize_language(language)
+    tracked_path = TEST_FIXTURE_ROOTS[canonical_language] / "300.json"
+    if not tracked_path.exists():
+        raise FileNotFoundError(f"Missing feature-group fixture for {canonical_language}: {tracked_path}")
+    return tracked_path
 
 
 def _drop_stubbed_runtime_modules():
@@ -83,11 +96,12 @@ def load_feature_group_payload(language):
 
 @lru_cache(maxsize=None)
 def _run_feature_group_case_cached(language, feature_groups, option):
-    payload = _load_payload_cached(language)
+    canonical_language = _normalize_language(language)
+    payload = _load_payload_cached(canonical_language)
     speech_characteristics = _load_speech_characteristics()
     words, turns, summary = speech_characteristics(
         payload,
-        language=PIPELINE_LANGUAGES[language],
+        language=CANONICAL_PIPELINE_LANGUAGES[canonical_language],
         speaker_label=PARTICIPANT_LABEL,
         option=option,
         feature_groups=list(feature_groups),
@@ -97,9 +111,10 @@ def _run_feature_group_case_cached(language, feature_groups, option):
 
 
 def load_feature_group_case(language, feature_groups, option):
-    payload, words, turns, summary = _run_feature_group_case_cached(language, tuple(feature_groups), option)
+    canonical_language = _normalize_language(language)
+    payload, words, turns, summary = _run_feature_group_case_cached(canonical_language, tuple(feature_groups), option)
     return {
-        "language": language,
+        "language": canonical_language,
         "json": json.loads(json.dumps(payload)),
         "words": words.copy(deep=True),
         "turns": turns.copy(deep=True),

@@ -103,12 +103,31 @@ jobs:
           for repo_id in (
               "google/embeddinggemma-300m",
               "google/gemma-3-270m",
+              "cardiffnlp/twitter-xlm-roberta-base-sentiment",
           ):
-              snapshot_download(
-                  repo_id=repo_id,
-                  token=token,
-                  revision="main",
-              )
+              kwargs = {"repo_id": repo_id, "revision": "main"}
+              if repo_id.startswith("google/"):
+                  kwargs["token"] = token
+              snapshot_download(**kwargs)
+          PY
+
+      - name: Validate XLM-R sentiment runtime
+        run: |
+          python - <<'PY'
+          import sentencepiece
+          from transformers import AutoTokenizer, pipeline
+
+          model_id = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+          tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+          pipe = pipeline(
+              "sentiment-analysis",
+              model=model_id,
+              tokenizer=tokenizer,
+              top_k=None,
+          )
+          print("sentencepiece", sentencepiece.__version__)
+          print("tokenizer", type(tokenizer).__name__)
+          print("pipeline_tokenizer", type(pipe.tokenizer).__name__)
           PY
 
       - name: Show feature-group runtime versions

@@ -429,7 +429,6 @@ def speech_characteristics(
     ------------------------------------------------------------------------------------------------------
     """
     try:
-        print("Try edit function....")
         # Load configuration measures
         measures = get_config(os.path.abspath(__file__), "text.json")
         whisper_turn_mode = cutil.normalize_whisper_turn_mode(whisper_turn_mode)

@@ -14,7 +14,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from lexicalrichness import LexicalRichness
 import spacy
 import torch
-from transformers import pipeline
+from transformers import AutoTokenizer, XLMRobertaTokenizer, pipeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -149,12 +149,30 @@ class MultilingualSentiment:
         device: Optional[str] = None,
     ):
         """Initialize the transformer sentiment pipeline and runtime device."""
-        self._pipe = pipeline(
-            "sentiment-analysis",
-            model=model_id,
-            tokenizer=model_id,
-            top_k=None,
-        )
+        tokenizer = model_id
+        pipeline_kwargs = {
+            "task": "sentiment-analysis",
+            "model": model_id,
+            "tokenizer": tokenizer,
+            "top_k": None,
+            "framework": "pt",
+        }
+        if "xlm-roberta" in str(model_id).lower():
+            # Prefer the fast tokenizer in environments where it is available.
+            # Fall back to the slow tokenizer for runtimes that need sentencepiece.
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+            except Exception:
+                try:
+                    tokenizer = XLMRobertaTokenizer.from_pretrained(model_id)
+                except Exception as exc:
+                    raise RuntimeError(
+                        "Failed to initialize the XLM-R tokenizer. Install sentencepiece "
+                        "(or transformers[sentencepiece]) in the runtime environment."
+                    ) from exc
+            pipeline_kwargs["tokenizer"] = tokenizer
+
+        self._pipe = pipeline(**pipeline_kwargs)
         self.tokenizer = self._pipe.tokenizer
         self.model = self._pipe.model
 
@@ -716,7 +734,11 @@ def get_first_person_summ(summ_df, turn_df, full_text, measures, lang='en', nlp=
                 else:
                     first_person_sentiment.append(row.get(out_neg_col, np.nan))
 
-            summ_df[out_overall_col] = np.nanmean(first_person_sentiment)
+            non_na_sentiment = [value for value in first_person_sentiment if not pd.isna(value)]
+            if non_na_sentiment:
+                summ_df[out_overall_col] = float(np.mean(non_na_sentiment))
+            else:
+                summ_df[out_overall_col] = np.nan
         else:
             fp_pos, fp_neg = calculate_first_person_sentiment(
                 summ_df,
@@ -1042,11 +1064,9 @@ def get_sentiment(
         normalized_lang = _normalize_lang(lang)
         lemmatizer = get_spacy_nlp(normalized_lang)
         
-        sentiment = get_multilingual_sentiment_analyzer()
         vader_sentiment = get_vader_sentiment_analyzer(lang=normalized_lang)
         sentiment_cols = [measures["neg"], measures["neu"], measures["pos"], measures["compound"]]
         mattr_cols = [measures["speech_mattr_5"], measures["speech_mattr_10"], measures["speech_mattr_25"], measures["speech_mattr_50"], measures["speech_mattr_100"]]
-        cols = sentiment_cols + mattr_cols
         vader_cols = [
             VADER_SENTIMENT_COLS["neg"],
             VADER_SENTIMENT_COLS["neu"],
@@ -1054,34 +1074,44 @@ def get_sentiment(
             VADER_SENTIMENT_COLS["compound"],
         ]
         turn_token_counts: Dict[int, float] = {}
+        sentiment = None
+
+        try:
+            sentiment = get_multilingual_sentiment_analyzer()
+        except Exception as e:
+            logger.info(f"Transformer sentiment analyzer unavailable: {e}")
 
         for idx, u in enumerate(turn_list):
-            turn_token_counts[idx] = _count_turn_tokens(u, sentiment.tokenizer)
             try:
-                sentiment_dict = sentiment.polarity_scores(u)
                 vader_dict = vader_sentiment.polarity_scores(u)
                 mattrs = get_mattrs(u, lemmatizer, window_sizes=MATTR_WINDOWS)
-                turn_df.loc[idx, cols] = _sentiment_values(sentiment_dict) + mattrs
+                turn_df.loc[idx, mattr_cols] = mattrs
                 turn_df.loc[idx, vader_cols] = _sentiment_values(vader_dict)
+                if sentiment is not None:
+                    turn_token_counts[idx] = _count_turn_tokens(u, sentiment.tokenizer)
+                    sentiment_dict = sentiment.polarity_scores(u)
+                    turn_df.loc[idx, sentiment_cols] = _sentiment_values(sentiment_dict)
 
             except Exception as e:
                 logger.info(f"Error in sentiment analysis: {e}")
                 continue
 
-        turn_for_summary = turn_df.copy()
-        turn_for_summary[_TURN_SENTIMENT_TOKEN_COUNT_COL] = pd.Series(turn_token_counts, dtype=float)
+        if sentiment is not None:
+            turn_for_summary = turn_df.copy()
+            turn_for_summary[_TURN_SENTIMENT_TOKEN_COUNT_COL] = pd.Series(turn_token_counts, dtype=float)
 
-        sentiment_dict = _aggregate_turn_sentiment_scores(
-            turn_for_summary,
-            length_col=_TURN_SENTIMENT_TOKEN_COUNT_COL,
-            neg_col=measures["neg"],
-            neu_col=measures["neu"],
-            pos_col=measures["pos"],
-            alpha=summary_sentiment_alpha,
-            eps=summary_sentiment_eps,
-        )
-        if sentiment_dict is None:
-            sentiment_dict = sentiment.polarity_scores(full_text)
+            sentiment_dict = _aggregate_turn_sentiment_scores(
+                turn_for_summary,
+                length_col=_TURN_SENTIMENT_TOKEN_COUNT_COL,
+                neg_col=measures["neg"],
+                neu_col=measures["neu"],
+                pos_col=measures["pos"],
+                alpha=summary_sentiment_alpha,
+                eps=summary_sentiment_eps,
+            )
+            if sentiment_dict is None:
+                sentiment_dict = sentiment.polarity_scores(full_text)
+            summ_df.loc[0, sentiment_cols] = _sentiment_values(sentiment_dict)
 
         # vader_dict = _aggregate_turn_sentiment_scores(
         #     turn_for_summary,
@@ -1097,7 +1127,6 @@ def get_sentiment(
 
         mattrs = get_mattrs(full_text, lemmatizer, window_sizes=MATTR_WINDOWS)
 
-        summ_df.loc[0, sentiment_cols] = _sentiment_values(sentiment_dict)
         summ_df.loc[0, mattr_cols] = mattrs
         summ_df.loc[0, vader_cols] = _sentiment_values(vader_dict)
         df_list = [word_df, turn_df, summ_df]

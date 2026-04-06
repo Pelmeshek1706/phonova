@@ -7,3 +7,5 @@ __pycache__/
 /tmp/
 /output/
 /sentiment_triplet_inference/outputs
+.venv_ci_repro/
+.hf_cache/

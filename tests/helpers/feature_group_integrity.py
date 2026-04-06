@@ -51,6 +51,40 @@ TURN_OPTIONAL_COLUMNS = [
         "second_order_sentence_tangeniality_var",
     ),
 ]
+CRITICAL_SENTIMENT_SUMMARY_COLUMNS = [
+    "sentiment_pos",
+    "sentiment_neg",
+    "sentiment_neu",
+    "sentiment_overall",
+    "sentiment_vader_pos",
+    "sentiment_vader_neg",
+    "sentiment_vader_neu",
+    "sentiment_vader_overall",
+    "mattr_5",
+    "mattr_10",
+    "mattr_25",
+    "mattr_50",
+    "mattr_100",
+    "first_person_percentage",
+    "first_person_sentiment_positive",
+    "first_person_sentiment_negative",
+    "first_person_sentiment_overall",
+    "first_person_sentiment_positive_vader",
+    "first_person_sentiment_negative_vader",
+    "first_person_sentiment_overall_vader",
+    "prop_verb_past",
+    "prop_function_words",
+]
+CRITICAL_WORD_COHERENCE_SUMMARY_COLUMNS = [
+    "word_coherence_mean",
+    "word_coherence_var",
+    "word_coherence_5_mean",
+    "word_coherence_5_var",
+    "word_coherence_10_mean",
+    "word_coherence_10_var",
+    *[f"word_coherence_variability_{k}_mean" for k in range(2, 11)],
+    *[f"word_coherence_variability_{k}_var" for k in range(2, 11)],
+]
 
 
 def _normalize_language(language):
@@ -130,7 +164,7 @@ def load_feature_group_payload(language):
 @lru_cache(maxsize=None)
 def _run_feature_group_case_cached(language, feature_groups, option):
     canonical_language = _normalize_language(language)
-    payload = _load_payload_cached(canonical_language)
+    payload = json.loads(json.dumps(_load_payload_cached(canonical_language)))
     speech_characteristics = _load_speech_characteristics()
     words, turns, summary = speech_characteristics(
         payload,
@@ -166,6 +200,11 @@ def _numeric_series(df, column):
 
 def _numeric_value(value):
     return float(pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0])
+
+
+def _assert_summary_notna(summary, columns):
+    missing = [column for column in columns if pd.isna(summary[column])]
+    assert not missing, f"Unexpected NaN summary columns: {missing}"
 
 
 def _valid_segment_words(segment):
@@ -233,10 +272,10 @@ def _participant_stats(json_payload):
 def _pipeline_structural_stats(language):
     canonical_language = _normalize_language(language)
     speech_attribute = _load_speech_attribute_module()
-    payload = _load_payload_cached(canonical_language)
+    payload = json.loads(json.dumps(_load_payload_cached(canonical_language)))
     measures = speech_attribute.get_config(str(speech_attribute.__file__), "text.json")
     filtered_words, utterances = speech_attribute.filter_whisper(
-        json.loads(json.dumps(payload)),
+        payload,
         measures,
         whisper_turn_mode="speaker",
     )
@@ -338,10 +377,16 @@ def assert_sentiment_and_first_person_group(language):
     assert len(words) == pipeline_stats["participant_word_count"]
     assert len(turns) == pipeline_stats["participant_turn_count"]
     assert words["part_of_speech"].notna().all()
+    _assert_summary_notna(summary, CRITICAL_SENTIMENT_SUMMARY_COLUMNS)
 
     for column in ("sentiment_pos", "sentiment_neg", "sentiment_neu"):
         series = _numeric_series(turns, column)
-        assert series.notna().any()
+        assert series.notna().all()
+        assert ((series >= 0.0) & (series <= 1.0)).all()
+
+    for column in ("sentiment_vader_pos", "sentiment_vader_neg", "sentiment_vader_neu"):
+        series = _numeric_series(turns, column)
+        assert series.notna().all()
         assert ((series >= 0.0) & (series <= 1.0)).all()
 
     turn_sentiment_total = (
@@ -418,6 +463,7 @@ def assert_coherence_and_perplexity_group(language):
     assert _numeric_value(summary["speaker_percentage"]) == pytest.approx(
         100.0 * stats["participant_segment_minutes"] / stats["file_length_minutes"]
     )
+    _assert_summary_notna(summary, CRITICAL_WORD_COHERENCE_SUMMARY_COLUMNS)
 
     for raw_col, mean_col, var_col in WORD_COHERENCE_COLUMNS:
         _assert_optional_summary_relationship(summary, words, raw_col, mean_col, var_col)

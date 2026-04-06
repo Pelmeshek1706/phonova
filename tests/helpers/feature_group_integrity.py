@@ -85,6 +85,22 @@ CRITICAL_WORD_COHERENCE_SUMMARY_COLUMNS = [
     *[f"word_coherence_variability_{k}_mean" for k in range(2, 11)],
     *[f"word_coherence_variability_{k}_var" for k in range(2, 11)],
 ]
+CRITICAL_STRUCTURAL_SUMMARY_COLUMNS = [
+    "file_length",
+    "speech_length_minutes",
+    "speech_length_words",
+    "speech_percentage",
+    "num_turns",
+    "num_one_word_turns",
+    "mean_turn_length_words",
+    "mean_turn_length_minutes",
+    "mean_pre_turn_pause",
+    "mean_pre_word_pause",
+    "mean_pause_variability",
+    "words_per_min",
+    "word_repeat_percentage",
+    "phrase_repeat_percentage",
+]
 
 
 def _normalize_language(language):
@@ -203,9 +219,14 @@ def _numeric_value(value):
     return float(pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0])
 
 
-def _assert_summary_notna(summary, columns):
+def _assert_summary_notna(summary, columns, context="summary"):
     missing = [column for column in columns if pd.isna(summary[column])]
-    assert not missing, f"Unexpected NaN summary columns: {missing}"
+    if missing:
+        observed = {column: summary.get(column) for column in columns}
+        raise AssertionError(
+            f"Unexpected NaN summary columns in {context}: {missing}. "
+            f"Observed values: {observed}"
+        )
 
 
 def _valid_segment_words(segment):
@@ -289,6 +310,7 @@ def assert_structural_group(language):
     turns = case["turns"]
     words = case["words"]
     stats = _participant_stats(case["json"])
+    _assert_summary_notna(summary, CRITICAL_STRUCTURAL_SUMMARY_COLUMNS, context=f"{language}/pause_repetition")
 
     assert len(words) == int(_numeric_value(summary["speech_length_words"]))
     assert len(turns) == int(_numeric_value(summary["num_turns"]))
@@ -350,7 +372,7 @@ def assert_sentiment_and_first_person_group(language):
     assert len(words) > 0
     assert len(turns) > 0
     assert words["part_of_speech"].notna().all()
-    _assert_summary_notna(summary, CRITICAL_SENTIMENT_SUMMARY_COLUMNS)
+    _assert_summary_notna(summary, CRITICAL_SENTIMENT_SUMMARY_COLUMNS, context=f"{language}/sentiment_first_person")
 
     for column in ("sentiment_pos", "sentiment_neg", "sentiment_neu"):
         series = _numeric_series(turns, column)
@@ -435,7 +457,7 @@ def assert_coherence_and_perplexity_group(language):
     assert _numeric_value(summary["speaker_percentage"]) == pytest.approx(
         100.0 * stats["participant_segment_minutes"] / stats["file_length_minutes"]
     )
-    _assert_summary_notna(summary, CRITICAL_WORD_COHERENCE_SUMMARY_COLUMNS)
+    _assert_summary_notna(summary, CRITICAL_WORD_COHERENCE_SUMMARY_COLUMNS, context=f"{language}/coherence")
 
     for raw_col, mean_col, var_col in WORD_COHERENCE_COLUMNS:
         _assert_optional_summary_relationship(summary, words, raw_col, mean_col, var_col)
@@ -462,6 +484,7 @@ def assert_cross_level_relationships(language):
     sentiment_summary = _summary_row(sentiment_case["summary"])
     coherence_summary = _summary_row(coherence_case["summary"])
     stats = _participant_stats(pause_case["json"])
+    _assert_summary_notna(pause_summary, CRITICAL_STRUCTURAL_SUMMARY_COLUMNS, context=f"{language}/cross_level_pause")
 
     pause_word_count = len(pause_case["words"])
     pause_turn_count = len(pause_case["turns"])

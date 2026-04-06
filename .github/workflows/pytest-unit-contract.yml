@@ -44,6 +44,7 @@ jobs:
     env:
       PYTHONUNBUFFERED: "1"
       HF_HOME: ~/.cache/huggingface
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
       TOKENIZERS_PARALLELISM: "false"
 
     steps:
@@ -71,6 +72,42 @@ jobs:
 
       - name: Install feature-group dependencies
         run: python -m pip install -r requirements-feature-groups.txt
+
+      - name: Validate Hugging Face token
+        run: |
+          test -n "$HF_TOKEN" || {
+            echo "Missing HF_TOKEN GitHub Actions secret";
+            exit 1;
+          }
+
+      - name: Log in to Hugging Face
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import login
+
+          login(
+              token=os.environ["HF_TOKEN"],
+              add_to_git_credential=False,
+          )
+          PY
+
+      - name: Download gated Hugging Face models
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+
+          token = os.environ["HF_TOKEN"]
+          for repo_id in (
+              "google/embeddinggemma-300m",
+              "google/gemma-3-270m",
+          ):
+              snapshot_download(
+                  repo_id=repo_id,
+                  token=token,
+              )
+          PY
 
       - name: Install spaCy language models
         run: |

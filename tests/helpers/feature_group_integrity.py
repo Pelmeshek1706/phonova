@@ -164,7 +164,8 @@ def load_feature_group_payload(language):
 @lru_cache(maxsize=None)
 def _run_feature_group_case_cached(language, feature_groups, option):
     canonical_language = _normalize_language(language)
-    payload = json.loads(json.dumps(_load_payload_cached(canonical_language)))
+    source_payload = json.loads(json.dumps(_load_payload_cached(canonical_language)))
+    payload = json.loads(json.dumps(source_payload))
     speech_characteristics = _load_speech_characteristics()
     words, turns, summary = speech_characteristics(
         payload,
@@ -174,7 +175,7 @@ def _run_feature_group_case_cached(language, feature_groups, option):
         feature_groups=list(feature_groups),
         whisper_turn_mode="speaker",
     )
-    return payload, words, turns, summary
+    return source_payload, words, turns, summary
 
 
 def load_feature_group_case(language, feature_groups, option):

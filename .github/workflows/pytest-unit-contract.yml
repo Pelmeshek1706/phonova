@@ -46,6 +46,7 @@ jobs:
       HF_HOME: ~/.cache/huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       TOKENIZERS_PARALLELISM: "false"
+      CUDA_VISIBLE_DEVICES: ""
 
     steps:
       - name: Checkout repository
@@ -106,7 +107,25 @@ jobs:
               snapshot_download(
                   repo_id=repo_id,
                   token=token,
+                  revision="main",
               )
+          PY
+
+      - name: Show feature-group runtime versions
+        run: |
+          python - <<'PY'
+          import huggingface_hub
+          import sentence_transformers
+          import spacy
+          import torch
+          import transformers
+
+          print("huggingface_hub", huggingface_hub.__version__)
+          print("transformers", transformers.__version__)
+          print("sentence_transformers", sentence_transformers.__version__)
+          print("torch", torch.__version__)
+          print("spacy", spacy.__version__)
+          print("mps_available", getattr(getattr(torch, "backends", None), "mps", None).is_available() if getattr(getattr(torch, "backends", None), "mps", None) is not None else False)
           PY
 
       - name: Install spaCy language models

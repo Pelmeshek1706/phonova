@@ -1,3 +1,10 @@
 -r requirements-test.txt
--r openwillis/openwillis-speech/requirements.txt
-torch
+vaderSentiment==3.3.2
+nltk==3.9.1
+lexicalrichness==0.5.1
+huggingface-hub==0.36.2
+transformers==4.57.6
+sentence-transformers==5.2.2
+spacy==3.7.5
+tf-keras>=2.15.1,<=2.18.0
+torch==2.10.0

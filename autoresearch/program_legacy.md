@@ -4,7 +4,7 @@ Read this file fully before making any changes.
 
 ## Scope
 
-You are optimizing the legacy training workflow defined in `train_legacy.py`.
+You are optimizing the single-dataset training workflow defined in `train_legacy.py`.
 
 You may edit only:
 - `train_legacy.py`
@@ -14,7 +14,58 @@ You may also create or update runtime artifacts only as part of normal experimen
 - files inside `artifacts/`
 
 Do not edit unrelated files.
-Do not edit other training scripts.
+Do not create alternative dataset files.
+Do not add a second dataset source.
+
+---
+
+## Dataset policy
+
+This workflow uses **exactly one dataset file**:
+- `merged_labels.csv`
+
+All experiments must run on the same merged dataset passed through:
+- `--dataset-path /path/to/merged_labels.csv`
+
+Do not search over multiple datasets.
+Do not compare `B0`, `L`, `B0+L`, or any other dataset variants.
+The only allowed source of data is the single merged CSV file.
+
+---
+
+## Fixed feature policy
+
+Use **all available features** from `merged_labels.csv` except the fixed excluded and redundant columns below.
+
+Always exclude:
+- `Participant`
+- `split`
+- `Depression_label`
+- `PTSD_label`
+- `gender`
+
+Always remove these redundant columns if present:
+- `mean_pre_turn_pause`
+- `mean_turn_length_minutes`
+- `mean_turn_length_words`
+- `turn_to_turn_tangeniality_mean`
+- `turn_to_previous_speaker_turn_similarity_mean`
+- `first_order_sentence_tangeniality_mean`
+- `second_order_sentence_tangeniality_mean`
+- `semantic_perplexity_mean`
+- `semantic_perplexity_5_mean`
+- `semantic_perplexity_11_mean`
+- `semantic_perplexity_15_mean`
+- `semantic_perplexity_11_var`
+- `semantic_perplexity_15_var`
+
+After this fixed cleanup, the model should train on the full remaining feature set.
+Do not perform arbitrary feature subset search.
+Do not switch to top-k selected features.
+Do not manually keep only a small subset of features.
+
+The expected cleaned feature set contains **83 numeric features**.
+If the actual count differs, log a warning and continue only if the difference is explainable by the dataset contents.
 
 ---
 
@@ -53,7 +104,6 @@ Do **not** use `test` for:
 - model selection
 - threshold tuning
 - preprocessing choice
-- feature-selection choice
 - hyperparameter search
 - deciding whether a change is good or bad
 
@@ -92,74 +142,65 @@ Prefer small coherent changes over chaotic rewrites.
 ## Allowed search directions
 
 You should actively explore:
-- dataset variant choice: `B0`, `L`, `B0+L`
 - model family
 - model hyperparameters
 - preprocessing strategies
-- class balancing settings
-- importance-based selected-feature branch settings
-- `importance_top_k`
-- `importance_corr_thr`
-- tree tuning settings
-- threshold choices when appropriate
-- whether importance-based selected variants help or hurt
-- whether demographics should be dropped or kept, but only when consistent with the experiment goal and leakage policy
+- imputation strategy
+- numeric scaling on/off
+- class weighting
+- linear-model tuning on/off
+- tree-model tuning on/off
+- CV settings
+- XGBoost usage when available
 
-You must respect leakage-safe behavior already implemented in the code.
+You must **not** explore:
+- multiple datasets
+- arbitrary feature subsets
+- top-k feature selection branches
+- hand-picked tiny feature groups
+
+You must respect the fixed feature policy above.
 
 ---
 
 ## Logging requirements
 
 Every training run must append structured results to `results.tsv`.
-The logged data should be sufficient to reconstruct the experiment history and plot metric progression.
+The logged data must be sufficient to reconstruct the experiment history and plot metric progression.
 
-At minimum, each run should document:
+At minimum, each row must document:
 - `run_id`
 - timestamp
 - target label
 - dataset path
-- dataset variant if known
 - mode (`experiment` or `final`)
 - train split(s)
 - eval split
 - model
 - model variant
 - hyperparameters
-- preprocessing notes
-- dev/test PR AUC
-- dev/test F1
-- short description of what changed
-- whether the run is exploratory, best-so-far, or final validation
+- preprocessing configuration
+- feature count
+- removed fixed columns
+- PR AUC
+- F1
+- short notes / experiment tag
 
 ---
 
 ## Plotting requirement
 
 The workflow must support plotting metrics from `results.tsv`.
-The graph should be based on logged runs, not manual notes.
+The graph must be based on logged runs, not manual notes.
 
-At the end of a search phase, or after selected runs, generate plots showing metric progression across runs.
-Prefer plotting at least:
-- PR AUC vs run order
-- F1 vs run order
+At minimum, support plotting:
+- PR AUC vs logged row order
+- F1 vs logged row order
 
-It should be possible to filter plots by:
+It must be possible to filter plots by:
 - target label
 - eval split (`dev` or `test`)
-
----
-
-## When a configuration is good enough to validate on test
-
-Only run final validation when all of the following are true:
-- the dev result is among the best seen so far
-- the configuration is stable and sensible
-- the code looks like a realistic final candidate
-- there is a clear reason to believe this configuration is worth validating
-
-Do not use test as a frequent checkpoint.
-Test is a confirmation gate, not a search tool.
+- mode (`experiment` or `final`)
 
 ---
 
@@ -168,95 +209,138 @@ Test is a confirmation gate, not a search tool.
 At the end, summarize:
 - best dev configuration for `Depression_label`
 - best dev configuration for `PTSD_label`
-- best dataset variant for each target
 - best model for each target
-- best threshold if used
-- whether selected-feature variants helped
+- best preprocessing setup for each target
 - whether final test validation was run
 - if final test validation was run, report final test PR AUC and F1
 - confirm that test was not used during iterative search
+- confirm that the fixed feature policy was preserved
 
 ---
 
 ## Command examples
 
-### 1) Build legacy datasets
+Use the same merged dataset in every example below.
 
-```bash
-python train_legacy.py build-datasets \
-  --detailed-labels-path /path/to/detailed_labels.csv \
-  --data-dir /path/to/result_openwillis_dir \
-  --out-dir /path/to/output_dir \
-  --language eng \
-  --iteration 3
-```
-
-### 2) Experiment on dev for PTSD
-
-Use this during search.
-This is the default search-style run.
+### 1) Experiment on dev with a broad default search for PTSD
 
 ```bash
 python train_legacy.py train \
-  --dataset-path /path/to/dataset_B0_plus_L_gemma_eng_full3.csv \
+  --dataset-path /path/to/merged_labels.csv \
   --target-col PTSD_label \
   --mode experiment \
-  --importance-top-k 5 \
-  --importance-corr-thr 0.90 \
-  --experiment-tag b0l_ptsd_search \
-  --notes "baseline with selected branch" \
+  --experiment-tag ptsd_default_search \
+  --notes "broad search on single merged dataset" \
   --results-tsv artifacts/results.tsv \
   --save-dir artifacts \
   --plot-after-run
 ```
 
-### 3) Experiment on dev for Depression
+### 2) Experiment on dev with only linear models for PTSD
 
 ```bash
 python train_legacy.py train \
-  --dataset-path /path/to/dataset_B0_plus_L_gemma_eng_full3.csv \
+  --dataset-path /path/to/merged_labels.csv \
+  --target-col PTSD_label \
+  --mode experiment \
+  --models logreg sgd \
+  --logreg-c-grid 0.01,0.1,1,10 \
+  --sgd-alpha-grid 0.000001,0.00001,0.0001,0.001 \
+  --imputer-strategy median \
+  --scale-numeric \
+  --experiment-tag ptsd_linear_search \
+  --notes "linear models only" \
+  --results-tsv artifacts/results.tsv \
+  --save-dir artifacts \
+  --plot-after-run
+```
+
+### 3) Experiment on dev with tree-based models for PTSD
+
+```bash
+python train_legacy.py train \
+  --dataset-path /path/to/merged_labels.csv \
+  --target-col PTSD_label \
+  --mode experiment \
+  --models tree rf xgb \
+  --tree-max-depth-grid 3,5,8,None \
+  --rf-n-estimators-grid 200,500,800 \
+  --rf-max-depth-grid 5,10,None \
+  --xgb-n-estimators-grid 200,500 \
+  --xgb-max-depth-grid 3,6,10 \
+  --experiment-tag ptsd_tree_search \
+  --notes "tree-heavy configuration" \
+  --results-tsv artifacts/results.tsv \
+  --save-dir artifacts \
+  --plot-after-run
+```
+
+### 4) Experiment on dev with no numeric scaling for Depression
+
+```bash
+python train_legacy.py train \
+  --dataset-path /path/to/merged_labels.csv \
   --target-col Depression_label \
   --mode experiment \
-  --importance-top-k 5 \
-  --importance-corr-thr 0.90 \
-  --experiment-tag b0l_depression_search \
-  --notes "depression dev search" \
+  --models logreg sgd svm rf \
+  --no-scale-numeric \
+  --imputer-strategy mean \
+  --experiment-tag depression_no_scaling \
+  --notes "check whether scaling hurts or helps" \
   --results-tsv artifacts/results.tsv \
   --save-dir artifacts \
   --plot-after-run
 ```
 
-### 4) Final validation on test for PTSD
-
-Run this only after you are confident in the candidate.
+### 5) Experiment on dev with no class weighting for Depression
 
 ```bash
 python train_legacy.py train \
-  --dataset-path /path/to/dataset_B0_plus_L_gemma_eng_full3.csv \
+  --dataset-path /path/to/merged_labels.csv \
+  --target-col Depression_label \
+  --mode experiment \
+  --class-weight none \
+  --models logreg svm rf \
+  --experiment-tag depression_no_class_weight \
+  --notes "compare against balanced weighting" \
+  --results-tsv artifacts/results.tsv \
+  --save-dir artifacts \
+  --plot-after-run
+```
+
+### 6) Final validation on test for PTSD
+
+Run this only after the dev result is clearly strong and stable.
+
+```bash
+python train_legacy.py train \
+  --dataset-path /path/to/merged_labels.csv \
   --target-col PTSD_label \
   --mode final \
-  --experiment-tag final_candidate \
+  --models logreg rf xgb \
+  --experiment-tag ptsd_final_candidate \
   --notes "final validation on test" \
   --results-tsv artifacts/results.tsv \
   --save-dir artifacts \
   --plot-after-run
 ```
 
-### 5) Final validation on test for Depression
+### 7) Final validation on test for Depression
 
 ```bash
 python train_legacy.py train \
-  --dataset-path /path/to/dataset_B0_plus_L_gemma_eng_full3.csv \
+  --dataset-path /path/to/merged_labels.csv \
   --target-col Depression_label \
   --mode final \
-  --experiment-tag final_candidate \
+  --models logreg svm rf \
+  --experiment-tag depression_final_candidate \
   --notes "final validation on test" \
   --results-tsv artifacts/results.tsv \
   --save-dir artifacts \
   --plot-after-run
 ```
 
-### 6) Plot PTSD dev progression from results.tsv
+### 8) Plot PTSD dev progression from results.tsv
 
 ```bash
 python train_legacy.py plot-results \
@@ -266,7 +350,7 @@ python train_legacy.py plot-results \
   --eval-split dev
 ```
 
-### 7) Plot Depression dev progression from results.tsv
+### 9) Plot Depression dev progression from results.tsv
 
 ```bash
 python train_legacy.py plot-results \
@@ -276,20 +360,23 @@ python train_legacy.py plot-results \
   --eval-split dev
 ```
 
-### 8) Plot PTSD test progression from results.tsv
+### 10) Plot final test progression for PTSD
 
 ```bash
 python train_legacy.py plot-results \
   --results-tsv artifacts/results.tsv \
   --out-path artifacts/metrics_progression_ptsd_test.svg \
   --target PTSD_label \
-  --eval-split test
+  --eval-split test \
+  --mode final
 ```
 
 ---
 
 ## Final principle
 
+Use one merged dataset.
+Use the fixed feature policy.
 Experiment on `dev`.
 Validate on `test` only when confident.
 If not confident, keep experimenting.

@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 import warnings
 from collections import Counter
 from datetime import datetime
@@ -13,6 +14,7 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.metrics import (
     accuracy_score,
@@ -24,12 +26,15 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
 )
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_predict, cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier, RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
 
 warnings.filterwarnings("ignore")
 
@@ -64,11 +69,28 @@ FIXED_REDUNDANT_DROP_COLS: List[str] = [
     "semantic_perplexity_15_var",
 ]
 
-ALLOWED_MODELS = ["logreg", "sgd", "svm", "tree", "rf", "xgb"]
+ALLOWED_MODELS = [
+    "logreg", "sgd", "svm", "tree", "rf", "et", "gb", "hgb", "gnb",
+    "ada", "knn", "mlp", "lda", "qda", "xgb",
+]
+
+ALLOWED_DATASET_PATH = Path(
+    "/Users/pelmeshek1706/Desktop/projects/final_airest_voice/airest/autoresearch/merged_features.csv"
+)
 
 
 def parse_csv_arg(value: str, cast=float) -> List[Any]:
     return [cast(x.strip()) for x in value.split(",") if x.strip()]
+
+
+def parse_threshold_grid(value: str) -> List[float]:
+    grid = sorted({float(x.strip()) for x in value.split(",") if x.strip()})
+    bad = [x for x in grid if x <= 0.0 or x >= 1.0]
+    if bad:
+        raise ValueError(f"Threshold grid values must be between 0 and 1 exclusive; got {bad}")
+    if not grid:
+        raise ValueError("Threshold grid cannot be empty.")
+    return grid
 
 
 def utc_now_str() -> str:
@@ -79,6 +101,24 @@ def make_run_id(target_col: str, mode: str) -> str:
     stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     short = target_col.replace("_label", "").lower()
     return f"{stamp}_{short}_{mode}"
+
+
+def validate_single_dataset_path(dataset_path: str) -> Path:
+    path = Path(dataset_path).expanduser().resolve()
+    allowed_path = ALLOWED_DATASET_PATH.resolve()
+    if path != allowed_path:
+        raise ValueError(
+            "Dataset policy violation: --dataset-path must point to the single allowed file "
+            f"{allowed_path}; got {path}."
+        )
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Required single dataset file does not exist: {path}. "
+            "No alternate dataset source is allowed."
+        )
+    if not path.is_file():
+        raise ValueError(f"Dataset path is not a file: {path}")
+    return path
 
 
 def bootstrap_ci_binary(
@@ -182,6 +222,31 @@ def prepare_xy(
     X_train = X_train[common_cols].copy()
     X_eval = X_eval[common_cols].copy()
 
+    non_numeric_cols = [c for c in X_train.columns if not pd.api.types.is_numeric_dtype(X_train[c])]
+    converted_cols: List[str] = []
+    rejected_cols: List[str] = []
+    for col in non_numeric_cols:
+        train_raw = X_train[col]
+        eval_raw = X_eval[col]
+        train_converted = pd.to_numeric(train_raw, errors="coerce")
+        eval_converted = pd.to_numeric(eval_raw, errors="coerce")
+        raw_non_null = int(train_raw.notna().sum() + eval_raw.notna().sum())
+        converted_non_null = int(train_converted.notna().sum() + eval_converted.notna().sum())
+        if converted_non_null < raw_non_null:
+            rejected_cols.append(col)
+            continue
+        X_train[col] = train_converted
+        X_eval[col] = eval_converted
+        converted_cols.append(col)
+
+    if rejected_cols:
+        raise ValueError(
+            "Fixed feature policy expects the cleaned feature space to be numeric. "
+            f"Non-numeric feature columns remain after fixed drops: {rejected_cols}"
+        )
+    if converted_cols:
+        print(f"[WARN] Converted numeric-looking feature columns to numeric dtype: {converted_cols}")
+
     removed_existing = [c for c in drop_cols if c in df.columns]
     missing_from_dataset = [c for c in drop_cols if c not in df.columns]
     return X_train, X_eval, y_train, y_eval, removed_existing, missing_from_dataset
@@ -227,6 +292,93 @@ def predict_proba_or_score(pipe: Pipeline, X: pd.DataFrame) -> Optional[np.ndarr
             return None
 
 
+def tune_threshold_on_train_cv(
+    pipe: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: np.ndarray,
+    *,
+    strategy: str,
+    fixed_threshold: float,
+    threshold_grid: Sequence[float],
+    cv_splits: int,
+    random_state: int,
+) -> Tuple[float, str, float]:
+    if strategy == "fixed":
+        return fixed_threshold, "fixed", float("nan")
+
+    k = safe_cv_splits(y_train, cv_splits)
+    if k < 2:
+        return fixed_threshold, "fixed_cv_unavailable", float("nan")
+
+    cv = StratifiedKFold(n_splits=k, shuffle=True, random_state=random_state)
+    proba: Optional[np.ndarray] = None
+    try:
+        pred = cross_val_predict(clone(pipe), X_train, y_train, cv=cv, method="predict_proba", n_jobs=1)
+        proba = pred[:, 1]
+    except Exception:
+        try:
+            from scipy.special import expit
+            scores = cross_val_predict(clone(pipe), X_train, y_train, cv=cv, method="decision_function", n_jobs=1)
+            proba = expit(scores)
+        except Exception:
+            proba = None
+
+    if proba is None:
+        return fixed_threshold, "fixed_score_unavailable", float("nan")
+
+    metric_name = strategy.replace("train_cv_", "")
+    best_threshold = fixed_threshold
+    best_score = -1.0
+    for threshold in threshold_grid:
+        y_pred = (proba >= threshold).astype(int)
+        if metric_name == "f1_macro":
+            score = float(f1_score(y_train, y_pred, average="macro", zero_division=0))
+        elif metric_name == "f1_positive":
+            score = float(f1_score(y_train, y_pred, average="binary", zero_division=0))
+        elif metric_name == "balanced_acc":
+            score = float(balanced_accuracy_score(y_train, y_pred))
+        else:
+            raise ValueError(f"Unsupported threshold strategy: {strategy}")
+
+        if score > best_score or (score == best_score and abs(threshold - 0.5) < abs(best_threshold - 0.5)):
+            best_score = score
+            best_threshold = float(threshold)
+
+    return best_threshold, metric_name, best_score
+
+
+def tune_threshold_on_eval_scores(
+    y_eval: np.ndarray,
+    y_proba: Optional[np.ndarray],
+    *,
+    strategy: str,
+    fixed_threshold: float,
+    threshold_grid: Sequence[float],
+) -> Tuple[float, str, float]:
+    if y_proba is None:
+        return fixed_threshold, "fixed_score_unavailable", float("nan")
+
+    metric_name = strategy.replace("eval_", "")
+    best_threshold = fixed_threshold
+    best_score = -1.0
+    for threshold in threshold_grid:
+        y_pred = (y_proba >= threshold).astype(int)
+        if metric_name == "f1_macro":
+            score = float(f1_score(y_eval, y_pred, average="macro", zero_division=0))
+        elif metric_name == "f1_positive":
+            score = float(f1_score(y_eval, y_pred, average="binary", zero_division=0))
+        elif metric_name == "balanced_acc":
+            score = float(balanced_accuracy_score(y_eval, y_pred))
+        else:
+            raise ValueError(f"Unsupported threshold strategy: {strategy}")
+
+        if score > best_score or (score == best_score and abs(threshold - 0.5) < abs(best_threshold - 0.5)):
+            best_score = score
+            best_threshold = float(threshold)
+
+    return best_threshold, metric_name, best_score
+
+
 def compute_metrics(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -237,6 +389,8 @@ def compute_metrics(
 ) -> Dict[str, Any]:
     out: Dict[str, Any] = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
+        "f1": float(f1_score(y_true, y_pred, average="binary", zero_division=0)),
+        "f1_positive": float(f1_score(y_true, y_pred, average="binary", zero_division=0)),
         "f1_macro": float(f1_score(y_true, y_pred, average="macro")),
         "balanced_acc": float(balanced_accuracy_score(y_true, y_pred)),
         "roc_auc": float("nan"),
@@ -345,6 +499,112 @@ def build_model_specs(args: argparse.Namespace, y_train: np.ndarray) -> List[Tup
             } if args.tune_tree_models else {},
         ))
 
+    if "et" in model_names:
+        specs.append((
+            "et",
+            ExtraTreesClassifier(random_state=args.random_state, class_weight=class_weight, n_jobs=1),
+            {
+                "n_estimators": parse_csv_arg(args.et_n_estimators_grid, int),
+                "max_depth": [None if x.strip().lower() == "none" else int(x.strip()) for x in args.et_max_depth_grid.split(",") if x.strip()],
+                "min_samples_leaf": parse_csv_arg(args.et_min_samples_leaf_grid, int),
+                "max_features": [float(x.strip()) if x.strip() not in {"sqrt", "log2"} else x.strip() for x in args.et_max_features_grid.split(",") if x.strip()],
+            } if args.tune_tree_models else {},
+        ))
+
+    if "gb" in model_names:
+        specs.append((
+            "gb",
+            GradientBoostingClassifier(random_state=args.random_state),
+            {
+                "n_estimators": parse_csv_arg(args.gb_n_estimators_grid, int),
+                "learning_rate": parse_csv_arg(args.gb_learning_rate_grid, float),
+                "max_depth": parse_csv_arg(args.gb_max_depth_grid, int),
+                "subsample": parse_csv_arg(args.gb_subsample_grid, float),
+            } if args.tune_tree_models else {},
+        ))
+
+    if "hgb" in model_names:
+        specs.append((
+            "hgb",
+            HistGradientBoostingClassifier(
+                random_state=args.random_state,
+                class_weight=class_weight,
+            ),
+            {
+                "max_iter": parse_csv_arg(args.hgb_max_iter_grid, int),
+                "learning_rate": parse_csv_arg(args.hgb_learning_rate_grid, float),
+                "max_leaf_nodes": parse_csv_arg(args.hgb_max_leaf_nodes_grid, int),
+                "l2_regularization": parse_csv_arg(args.hgb_l2_regularization_grid, float),
+            } if args.tune_tree_models else {},
+        ))
+
+    if "gnb" in model_names:
+        specs.append((
+            "gnb",
+            GaussianNB(),
+            {
+                "var_smoothing": parse_csv_arg(args.gnb_var_smoothing_grid, float),
+            } if args.tune_linear_models else {},
+        ))
+
+    if "ada" in model_names:
+        specs.append((
+            "ada",
+            AdaBoostClassifier(random_state=args.random_state),
+            {
+                "n_estimators": parse_csv_arg(args.ada_n_estimators_grid, int),
+                "learning_rate": parse_csv_arg(args.ada_learning_rate_grid, float),
+            } if args.tune_tree_models else {},
+        ))
+
+    if "knn" in model_names:
+        specs.append((
+            "knn",
+            KNeighborsClassifier(),
+            {
+                "n_neighbors": parse_csv_arg(args.knn_n_neighbors_grid, int),
+                "weights": [x.strip() for x in args.knn_weights_grid.split(",") if x.strip()],
+                "p": parse_csv_arg(args.knn_p_grid, int),
+            } if args.tune_linear_models else {},
+        ))
+
+    if "mlp" in model_names:
+        hidden_layer_sizes = []
+        for value in [x.strip() for x in args.mlp_hidden_layer_sizes_grid.split(",") if x.strip()]:
+            hidden_layer_sizes.append(tuple(int(part) for part in value.split("-") if part))
+        specs.append((
+            "mlp",
+            MLPClassifier(
+                max_iter=args.max_iter,
+                early_stopping=True,
+                random_state=args.random_state,
+            ),
+            {
+                "hidden_layer_sizes": hidden_layer_sizes,
+                "alpha": parse_csv_arg(args.mlp_alpha_grid, float),
+                "learning_rate_init": parse_csv_arg(args.mlp_learning_rate_init_grid, float),
+            } if args.tune_linear_models else {},
+        ))
+
+    if "lda" in model_names:
+        specs.append((
+            "lda",
+            LinearDiscriminantAnalysis(),
+            {
+                "solver": [x.strip() for x in args.lda_solver_grid.split(",") if x.strip()],
+                "shrinkage": [None if x.strip().lower() == "none" else x.strip() for x in args.lda_shrinkage_grid.split(",") if x.strip()],
+            } if args.tune_linear_models else {},
+        ))
+
+    if "qda" in model_names:
+        specs.append((
+            "qda",
+            QuadraticDiscriminantAnalysis(),
+            {
+                "reg_param": parse_csv_arg(args.qda_reg_param_grid, float),
+            } if args.tune_linear_models else {},
+        ))
+
     if "xgb" in model_names and XGB_AVAILABLE:
         pos = int((y_train == 1).sum())
         neg = int((y_train == 0).sum())
@@ -412,6 +672,42 @@ def append_results_tsv(results_tsv: str, res_df: pd.DataFrame) -> None:
     path = Path(results_tsv)
     path.parent.mkdir(parents=True, exist_ok=True)
     header = not path.exists()
+    if path.exists():
+        with path.open("r", encoding="utf-8") as f:
+            first_line = f.readline().rstrip("\n")
+        existing_columns = first_line.split("\t") if first_line else []
+        new_columns = list(res_df.columns)
+        if existing_columns != new_columns:
+            existing_df = pd.read_csv(path, sep="\t")
+            union_columns = list(existing_columns)
+            union_columns.extend([c for c in new_columns if c not in union_columns])
+            for col in union_columns:
+                if col not in existing_df.columns:
+                    existing_df[col] = ""
+                if col not in res_df.columns:
+                    res_df[col] = ""
+            existing_paths = set(existing_df["dataset_path"].dropna().astype(str)) if "dataset_path" in existing_df.columns else set()
+            new_paths = set(res_df["dataset_path"].dropna().astype(str)) if "dataset_path" in res_df.columns else set()
+            if existing_paths and new_paths and existing_paths != new_paths:
+                raise ValueError(
+                    "Dataset policy violation: existing results.tsv rows use a different dataset_path. "
+                    f"existing={sorted(existing_paths)} new={sorted(new_paths)}"
+                )
+            combined = pd.concat(
+                [existing_df[union_columns], res_df[union_columns]],
+                ignore_index=True,
+            )
+            combined.to_csv(path, sep="\t", index=False)
+            return
+        existing_df = pd.read_csv(path, sep="\t", usecols=["dataset_path"]) if "dataset_path" in existing_columns else pd.DataFrame()
+        if not existing_df.empty:
+            existing_paths = set(existing_df["dataset_path"].dropna().astype(str))
+            new_paths = set(res_df["dataset_path"].dropna().astype(str))
+            if existing_paths and new_paths and existing_paths != new_paths:
+                raise ValueError(
+                    "Dataset policy violation: existing results.tsv rows use a different dataset_path. "
+                    f"existing={sorted(existing_paths)} new={sorted(new_paths)}"
+                )
     res_df.to_csv(path, sep="\t", mode="a", header=header, index=False)
 
 
@@ -427,7 +723,17 @@ def print_feature_policy(X_train: pd.DataFrame, removed_existing: List[str], mis
 
 
 def run_training(args: argparse.Namespace) -> pd.DataFrame:
-    df = pd.read_csv(args.dataset_path)
+    dataset_path = validate_single_dataset_path(args.dataset_path)
+    if args.extra_drop_cols:
+        raise ValueError(
+            "Fixed feature policy violation: --extra-drop-cols is disabled for this workflow. "
+            "Use the full cleaned feature set after the required fixed drops."
+        )
+    if args.mode == "final" and args.threshold_strategy.startswith("eval_"):
+        raise ValueError("eval_* threshold strategies are experiment-only; final mode must use a fixed threshold selected on dev.")
+    if not 0.0 < args.fixed_threshold < 1.0:
+        raise ValueError(f"--fixed-threshold must be between 0 and 1 exclusive; got {args.fixed_threshold}")
+    df = pd.read_csv(dataset_path)
 
     if args.mode == "experiment":
         train_values = ("train",)
@@ -436,21 +742,22 @@ def run_training(args: argparse.Namespace) -> pd.DataFrame:
         train_values = ("train", "dev")
         eval_value = "test"
     else:
-        train_values = tuple(args.train_values)
-        eval_value = args.eval_value
+        raise ValueError(f"Unsupported mode for this workflow: {args.mode}")
 
-    extra_drop = [x.strip() for x in args.extra_drop_cols.split(",") if x.strip()] if args.extra_drop_cols else []
     X_train, X_eval, y_train, y_eval, removed_existing, missing_from_dataset = prepare_xy(
         df,
         target_col=args.target_col,
         split_col=args.split_col,
         train_values=train_values,
         eval_value=eval_value,
-        extra_drop=extra_drop,
+        extra_drop=None,
     )
 
     print_feature_policy(X_train, removed_existing, missing_from_dataset, args.expected_feature_count)
-    print(f"[INFO] dataset_path = {args.dataset_path}")
+    feature_count_warning = ""
+    if args.expected_feature_count is not None and X_train.shape[1] != args.expected_feature_count:
+        feature_count_warning = f"expected {args.expected_feature_count}; actual {X_train.shape[1]}"
+    print(f"[INFO] dataset_path = {dataset_path}")
     print(f"[INFO] target_col = {args.target_col}")
     print(f"[INFO] mode = {args.mode}")
     print(f"[INFO] train_values = {train_values} | eval_value = {eval_value}")
@@ -459,12 +766,20 @@ def run_training(args: argparse.Namespace) -> pd.DataFrame:
 
     pre = build_preprocessor(X_train, imputer_strategy=args.imputer_strategy, scale_numeric=args.scale_numeric)
     model_specs = build_model_specs(args, y_train)
+    if not model_specs:
+        raise ValueError("No runnable model specifications were built. Check --models and optional dependencies.")
+    threshold_grid = parse_threshold_grid(args.threshold_grid)
 
     run_id = make_run_id(args.target_col, args.mode)
     timestamp_utc = utc_now_str()
+    cli_config = {
+        k: str(v) if isinstance(v, Path) else v
+        for k, v in vars(args).items()
+        if k not in {"command"}
+    }
     all_rows: List[Dict[str, Any]] = []
 
-    for model_name, estimator, grid in model_specs:
+    for model_idx, (model_name, estimator, grid) in enumerate(model_specs, start=1):
         pipe, best_params, best_cv, tuned = fit_with_optional_grid(
             estimator=estimator,
             preprocessor=pre,
@@ -476,39 +791,133 @@ def run_training(args: argparse.Namespace) -> pd.DataFrame:
             random_state=args.random_state,
         )
         cv_mean, cv_std = cv_pr_auc(pipe, X_train, y_train, args.cv_splits)
-        y_pred = pipe.predict(X_eval)
         y_proba = predict_proba_or_score(pipe, X_eval)
+        if args.threshold_strategy.startswith("eval_"):
+            decision_threshold, threshold_cv_metric, threshold_cv_score = tune_threshold_on_eval_scores(
+                y_eval,
+                y_proba,
+                strategy=args.threshold_strategy,
+                fixed_threshold=args.fixed_threshold,
+                threshold_grid=threshold_grid,
+            )
+        else:
+            decision_threshold, threshold_cv_metric, threshold_cv_score = tune_threshold_on_train_cv(
+                pipe,
+                X_train,
+                y_train,
+                strategy=args.threshold_strategy,
+                fixed_threshold=args.fixed_threshold,
+                threshold_grid=threshold_grid,
+                cv_splits=args.cv_splits,
+                random_state=args.random_state,
+            )
+        if y_proba is not None:
+            y_pred = (y_proba >= decision_threshold).astype(int)
+        else:
+            y_pred = pipe.predict(X_eval)
         metrics = compute_metrics(y_eval, y_pred, y_proba, n_boot=args.n_boot, seed=args.random_state)
+        objective_f1 = metrics["f1_macro"]
 
         row: Dict[str, Any] = {
             "run_id": run_id,
+            "run_model_id": f"{run_id}_{model_idx:02d}_{model_name}",
             "timestamp_utc": timestamp_utc,
             "experiment_tag": args.experiment_tag,
             "notes": args.notes,
-            "dataset_path": str(Path(args.dataset_path).resolve()),
+            "dataset_path": str(dataset_path.resolve()),
+            "dataset_basename": dataset_path.name,
             "target": args.target_col,
+            "target_label": args.target_col,
             "mode": args.mode,
             "train_values": ",".join(train_values),
             "eval_split": eval_value,
             "feature_policy": "all_available_minus_fixed_excluded_minus_fixed_redundant",
             "removed_columns": json.dumps(removed_existing, ensure_ascii=False),
+            "fixed_drop_columns": json.dumps(get_fixed_drop_cols(), ensure_ascii=False),
+            "missing_fixed_drop_columns": json.dumps(missing_from_dataset, ensure_ascii=False),
             "feature_count": int(X_train.shape[1]),
+            "numeric_feature_count": int(X_train.shape[1]),
+            "non_numeric_feature_columns": "[]",
             "expected_feature_count": args.expected_feature_count,
+            "feature_count_matches_expected": bool(
+                args.expected_feature_count is None or X_train.shape[1] == args.expected_feature_count
+            ),
+            "feature_count_warning": feature_count_warning,
+            "split_col": args.split_col,
             "imputer_strategy": args.imputer_strategy,
             "scale_numeric": bool(args.scale_numeric),
             "class_weight": args.class_weight,
             "models_cli": ",".join(args.models or ALLOWED_MODELS),
             "cv_splits": args.cv_splits,
             "grid_scoring": args.grid_scoring,
+            "random_state": args.random_state,
+            "n_boot": args.n_boot,
+            "max_iter": args.max_iter,
+            "tune_linear_models": bool(args.tune_linear_models),
+            "tune_tree_models": bool(args.tune_tree_models),
+            "threshold_strategy": args.threshold_strategy,
+            "fixed_threshold": args.fixed_threshold,
+            "threshold_grid": args.threshold_grid,
+            "decision_threshold": decision_threshold,
+            "threshold_cv_metric": threshold_cv_metric,
+            "threshold_cv_score": threshold_cv_score,
             "model": model_name,
             "variant": "full_tuned" if tuned else "full",
             "tuned": bool(tuned),
+            "param_grid": json.dumps(grid, ensure_ascii=False),
+            "estimator_params": json.dumps(estimator.get_params(), ensure_ascii=False, default=str),
             "best_params": json.dumps(best_params, ensure_ascii=False),
             "cv_best_score": best_cv,
             "cv_pr_auc_mean": cv_mean,
             "cv_pr_auc_std": cv_std,
             "n_train": int(len(y_train)),
             "n_eval": int(len(y_eval)),
+            "logreg_c_grid": args.logreg_c_grid,
+            "sgd_alpha_grid": args.sgd_alpha_grid,
+            "sgd_penalty": args.sgd_penalty,
+            "svm_c_grid": args.svm_c_grid,
+            "svm_gamma_grid": args.svm_gamma_grid,
+            "svm_kernel_grid": args.svm_kernel_grid,
+            "tree_max_depth_grid": args.tree_max_depth_grid,
+            "tree_min_samples_leaf_grid": args.tree_min_samples_leaf_grid,
+            "tree_min_samples_split_grid": args.tree_min_samples_split_grid,
+            "rf_n_estimators_grid": args.rf_n_estimators_grid,
+            "rf_max_depth_grid": args.rf_max_depth_grid,
+            "rf_min_samples_leaf_grid": args.rf_min_samples_leaf_grid,
+            "rf_max_features_grid": args.rf_max_features_grid,
+            "et_n_estimators_grid": args.et_n_estimators_grid,
+            "et_max_depth_grid": args.et_max_depth_grid,
+            "et_min_samples_leaf_grid": args.et_min_samples_leaf_grid,
+            "et_max_features_grid": args.et_max_features_grid,
+            "gb_n_estimators_grid": args.gb_n_estimators_grid,
+            "gb_learning_rate_grid": args.gb_learning_rate_grid,
+            "gb_max_depth_grid": args.gb_max_depth_grid,
+            "gb_subsample_grid": args.gb_subsample_grid,
+            "hgb_max_iter_grid": args.hgb_max_iter_grid,
+            "hgb_learning_rate_grid": args.hgb_learning_rate_grid,
+            "hgb_max_leaf_nodes_grid": args.hgb_max_leaf_nodes_grid,
+            "hgb_l2_regularization_grid": args.hgb_l2_regularization_grid,
+            "gnb_var_smoothing_grid": args.gnb_var_smoothing_grid,
+            "ada_n_estimators_grid": args.ada_n_estimators_grid,
+            "ada_learning_rate_grid": args.ada_learning_rate_grid,
+            "knn_n_neighbors_grid": args.knn_n_neighbors_grid,
+            "knn_weights_grid": args.knn_weights_grid,
+            "knn_p_grid": args.knn_p_grid,
+            "mlp_hidden_layer_sizes_grid": args.mlp_hidden_layer_sizes_grid,
+            "mlp_alpha_grid": args.mlp_alpha_grid,
+            "mlp_learning_rate_init_grid": args.mlp_learning_rate_init_grid,
+            "lda_solver_grid": args.lda_solver_grid,
+            "lda_shrinkage_grid": args.lda_shrinkage_grid,
+            "qda_reg_param_grid": args.qda_reg_param_grid,
+            "xgb_use_scale_pos_weight": bool(args.xgb_use_scale_pos_weight),
+            "xgb_n_estimators_grid": args.xgb_n_estimators_grid,
+            "xgb_max_depth_grid": args.xgb_max_depth_grid,
+            "xgb_learning_rate_grid": args.xgb_learning_rate_grid,
+            "xgb_subsample_grid": args.xgb_subsample_grid,
+            "xgb_colsample_bytree_grid": args.xgb_colsample_bytree_grid,
+            "objective_f1": objective_f1,
+            "cli_argv": json.dumps(sys.argv, ensure_ascii=False),
+            "cli_args_json": json.dumps(cli_config, ensure_ascii=False, sort_keys=True),
         }
         row.update(metrics)
         all_rows.append(row)
@@ -517,17 +926,19 @@ def run_training(args: argparse.Namespace) -> pd.DataFrame:
         if tuned:
             print(f"Best CV score ({args.grid_scoring}): {best_cv:.4f} | params: {best_params}")
         print(f"Train CV PR AUC: {cv_mean:.4f} +/- {cv_std:.4f}")
+        print(f"Decision threshold: {decision_threshold:.3f} ({threshold_cv_metric}={threshold_cv_score:.4f})")
         print(classification_report(y_eval, y_pred, digits=3))
         print("Confusion matrix:")
         print(confusion_matrix(y_eval, y_pred))
 
-    res_df = pd.DataFrame(all_rows).sort_values(["pr_auc", "f1_macro"], ascending=[False, False]).reset_index(drop=True)
+    res_df = pd.DataFrame(all_rows).reset_index(drop=True)
+    summary_df = res_df.sort_values(["pr_auc", "objective_f1"], ascending=[False, False]).reset_index(drop=True)
 
     print("\n=== Summary metrics ===")
     print(
-        res_df[[
+        summary_df[[
             "target", "mode", "model", "variant", "feature_count", "cv_pr_auc_mean",
-            "pr_auc", "f1_macro", "roc_auc", "balanced_acc", "best_params"
+            "pr_auc", "objective_f1", "f1_macro", "f1", "roc_auc", "balanced_acc", "decision_threshold", "best_params"
         ]].round(4).to_string(index=False)
     )
 
@@ -538,7 +949,7 @@ def run_training(args: argparse.Namespace) -> pd.DataFrame:
     out_json = save_dir / f"{stem}_best.json"
     res_df.to_csv(out_csv, index=False)
     with out_json.open("w", encoding="utf-8") as f:
-        json.dump(res_df.iloc[0].to_dict(), f, indent=2, ensure_ascii=False)
+        json.dump(summary_df.iloc[0].to_dict(), f, indent=2, ensure_ascii=False)
     print(f"[INFO] Saved run table to: {out_csv}")
     print(f"[INFO] Saved best row to: {out_json}")
 
@@ -580,10 +991,11 @@ def plot_results(
     df = df.reset_index(drop=True)
     df["plot_idx"] = np.arange(1, len(df) + 1)
     best_idx = int(df["pr_auc"].astype(float).idxmax())
+    f1_col = "objective_f1" if "objective_f1" in df.columns else "f1_macro"
 
     plt.figure(figsize=(10, 6))
     plt.plot(df["plot_idx"], df["pr_auc"], marker="o", label="PR AUC")
-    plt.plot(df["plot_idx"], df["f1_macro"], marker="o", label="F1 macro")
+    plt.plot(df["plot_idx"], df[f1_col], marker="o", label="F1")
     plt.scatter(df.loc[best_idx, "plot_idx"], df.loc[best_idx, "pr_auc"], s=80, label="Best PR AUC")
     plt.xlabel("Logged row order")
     plt.ylabel("Metric value")
@@ -607,13 +1019,17 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     p_train = subparsers.add_parser("train", help="Run training on one merged dataset.")
-    p_train.add_argument("--dataset-path", required=True, help="Path to the single merged_labels.csv dataset.")
+    p_train.add_argument("--dataset-path", required=True, help=f"Path to the single allowed dataset: {ALLOWED_DATASET_PATH}")
     p_train.add_argument("--target-col", required=True, choices=["Depression_label", "PTSD_label"])
-    p_train.add_argument("--mode", default="experiment", choices=["experiment", "final", "custom"])
-    p_train.add_argument("--train-values", nargs="*", default=None, help="Used only with mode=custom")
-    p_train.add_argument("--eval-value", default=None, help="Used only with mode=custom")
+    p_train.add_argument("--mode", default="experiment", choices=["experiment", "final"])
+    p_train.add_argument("--train-values", nargs="*", default=None, help="Deprecated; experiment/final modes define splits.")
+    p_train.add_argument("--eval-value", default=None, help="Deprecated; experiment/final modes define splits.")
     p_train.add_argument("--split-col", default="split")
-    p_train.add_argument("--extra-drop-cols", default="", help="Optional extra columns to drop, comma-separated.")
+    p_train.add_argument(
+        "--extra-drop-cols",
+        default="",
+        help="Disabled by the fixed full-feature policy; any non-empty value raises an error.",
+    )
     p_train.add_argument("--expected-feature-count", type=int, default=83)
 
     p_train.add_argument("--models", nargs="*", default=None, choices=ALLOWED_MODELS)
@@ -627,6 +1043,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--random-state", type=int, default=1706)
     p_train.add_argument("--n-boot", type=int, default=2000)
     p_train.add_argument("--max-iter", type=int, default=5000)
+    p_train.add_argument(
+        "--threshold-strategy",
+        default="fixed",
+        choices=[
+            "fixed",
+            "train_cv_f1_macro",
+            "train_cv_f1_positive",
+            "train_cv_balanced_acc",
+            "eval_f1_macro",
+            "eval_f1_positive",
+            "eval_balanced_acc",
+        ],
+        help="Decision-threshold policy. train_cv_* tune on training folds; eval_* are experiment-only dev tuning.",
+    )
+    p_train.add_argument("--fixed-threshold", type=float, default=0.5)
+    p_train.add_argument(
+        "--threshold-grid",
+        default="0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90,0.95",
+    )
 
     p_train.add_argument("--tune-linear-models", dest="tune_linear_models", action="store_true")
     p_train.add_argument("--no-tune-linear-models", dest="tune_linear_models", action="store_false")
@@ -648,6 +1083,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--rf-max-depth-grid", default="5,10,None")
     p_train.add_argument("--rf-min-samples-leaf-grid", default="1,2,4")
     p_train.add_argument("--rf-max-features-grid", default="sqrt,log2,0.5")
+    p_train.add_argument("--et-n-estimators-grid", default="300,600")
+    p_train.add_argument("--et-max-depth-grid", default="5,10,None")
+    p_train.add_argument("--et-min-samples-leaf-grid", default="1,2,4,8")
+    p_train.add_argument("--et-max-features-grid", default="sqrt,log2,0.3,0.5")
+    p_train.add_argument("--gb-n-estimators-grid", default="100,200")
+    p_train.add_argument("--gb-learning-rate-grid", default="0.03,0.1")
+    p_train.add_argument("--gb-max-depth-grid", default="1,2,3")
+    p_train.add_argument("--gb-subsample-grid", default="0.7,1.0")
+    p_train.add_argument("--hgb-max-iter-grid", default="100,200")
+    p_train.add_argument("--hgb-learning-rate-grid", default="0.03,0.1")
+    p_train.add_argument("--hgb-max-leaf-nodes-grid", default="7,15,31")
+    p_train.add_argument("--hgb-l2-regularization-grid", default="0,0.1,1")
+    p_train.add_argument("--gnb-var-smoothing-grid", default="0.000000001,0.00000001,0.0000001,0.000001,0.00001,0.0001,0.001")
+    p_train.add_argument("--ada-n-estimators-grid", default="50,100,200")
+    p_train.add_argument("--ada-learning-rate-grid", default="0.01,0.03,0.1,0.3,1")
+    p_train.add_argument("--knn-n-neighbors-grid", default="3,5,7,9,15")
+    p_train.add_argument("--knn-weights-grid", default="uniform,distance")
+    p_train.add_argument("--knn-p-grid", default="1,2")
+    p_train.add_argument("--mlp-hidden-layer-sizes-grid", default="16,32,16-8,32-16")
+    p_train.add_argument("--mlp-alpha-grid", default="0.0001,0.001,0.01,0.1")
+    p_train.add_argument("--mlp-learning-rate-init-grid", default="0.0003,0.001,0.003")
+    p_train.add_argument("--lda-solver-grid", default="lsqr,eigen")
+    p_train.add_argument("--lda-shrinkage-grid", default="None,auto")
+    p_train.add_argument("--qda-reg-param-grid", default="0,0.01,0.03,0.1,0.3,0.5,0.7,1")
     p_train.add_argument("--xgb-use-scale-pos-weight", dest="xgb_use_scale_pos_weight", action="store_true")
     p_train.add_argument("--no-xgb-use-scale-pos-weight", dest="xgb_use_scale_pos_weight", action="store_false")
     p_train.set_defaults(xgb_use_scale_pos_weight=True)
@@ -679,9 +1138,6 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "train":
-        if args.mode == "custom":
-            if not args.train_values or args.eval_value is None:
-                raise ValueError("For mode=custom you must provide --train-values and --eval-value")
         run_training(args)
         return
 

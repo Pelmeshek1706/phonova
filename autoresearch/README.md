@@ -79,6 +79,35 @@ One final test evaluation was run with `--include-test`.
 - Test F1: `0.578947`
 - Test ROC AUC: `0.761905`
 
+## Legacy
+
+The legacy workflow in `train_legacy.py` was run on the single allowed dataset:
+
+`/Users/pelmeshek1706/Desktop/projects/final_airest_voice/airest/autoresearch/merged_features.csv`
+
+The fixed legacy feature policy removed `Participant`, `split`, both target labels, `gender`, and the fixed redundant columns. The cleaned legacy feature set contained 83 numeric features.
+
+### PTSD_label
+
+- Final validation mode: train on `train+dev`, evaluate on `test`
+- Model: `HistGradientBoostingClassifier`
+- Best params: `{"l2_regularization": 0.0, "learning_rate": 0.03, "max_iter": 100, "max_leaf_nodes": 7}`
+- Fixed threshold: `0.70`
+- Test PR AUC: `0.664667`
+- Test objective F1: `0.549195`
+- Test positive-class F1: `0.307692`
+- Test ROC AUC: `0.751020`
+- Test balanced accuracy: `0.580952`
+
+### Depression_label
+
+- Final test validation was not run for the legacy workflow.
+- Best dev PR AUC reached: `0.458525`
+- Best dev objective F1 reached: `0.649374`
+- The dev thresholds of PR AUC >= `0.70` and F1 >= `0.70` were not both satisfied.
+
+Legacy run history is logged in `artifacts/results.tsv`.
+
 ## Notes
 
 - Test data was used only once for the final evaluation.

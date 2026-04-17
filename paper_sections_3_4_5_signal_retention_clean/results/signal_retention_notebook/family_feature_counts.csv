@@ -1,0 +1,4 @@
+family,label,n_features,n_vader,n_nonvader
+B0_rho05_vaderfull,B0: rho>0.5 + full VADER hist,82,28,54
+B07_from_B0,B07: B0 filtered to rho>0.7,53,5,48
+B09_from_B0,B09: B0 filtered to rho>0.9,20,1,19

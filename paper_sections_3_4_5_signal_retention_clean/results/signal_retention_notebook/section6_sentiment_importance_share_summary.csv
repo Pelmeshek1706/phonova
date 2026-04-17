@@ -1,0 +1,3 @@
+target,selection_view,total_abs_coef_sum,sentiment_abs_coef_sum,sentiment_share_abs_coef,top15_sentiment_feature_count,top15_total_feature_count
+Depression_label,best_en,2.7645252308939714,2.060280520424837,0.7452565443790864,15,15
+PTSD_label,best_en,1.5404591842988944,1.1188837204919073,0.7263312990672598,15,15

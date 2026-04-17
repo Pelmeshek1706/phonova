@@ -1,0 +1,3 @@
+target,family,model,n_features,official_test_pr,official_test_f1,official_test_f1_binary,official_test_accuracy,official_test_roc
+Depression_label,logreg_l2_liblinear,logreg_l2_liblinear_C0.02_bal,82,0.7290024732412276,0.7888386123680242,0.7058823529411765,0.8214285714285714,0.7873303167420815
+PTSD_label,logreg_l2_liblinear,logreg_l2_liblinear_C0.005_cwpos3.2,82,0.7439755267542281,0.7213930348258707,0.6666666666666666,0.7321428571428571,0.8068027210884353

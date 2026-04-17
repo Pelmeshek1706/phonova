@@ -1,0 +1,15 @@
+{
+  "script_version": "3_4_2026_expanded_stable05_full_vader_model_family_sweep_v1",
+  "fixed_feature_group": "stable_rho_gt_05__full_vader_hist",
+  "consistency_path": "/Users/poluidol/Documents/work/airest/airest_perp_research/data_analysis/tmp/model_search_3_4_2026_expanded_ua_sentiment_hist_raw_vs_translated/consistency_en_ua_all_plus_sentiment_hist.csv",
+  "augmented_en_path": "/Users/poluidol/Documents/work/airest/airest_perp_research/data_analysis/tmp/model_search_3_4_2026_expanded_en_tier1_signal_check/summary_en_3_4_2026_expanded_with_tier1_signal_features.csv",
+  "fixed_feature_meta": {
+    "stable_rho_gt_05_count_before_union": 63,
+    "full_vader_hist_count": 28,
+    "stable_vader_overlap_count": 9,
+    "final_feature_count": 82
+  },
+  "splits": 5,
+  "repeats": 10,
+  "xgboost_available": true
+}

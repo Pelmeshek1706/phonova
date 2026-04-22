@@ -9,6 +9,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SPEECH_ROOT = REPO_ROOT / "openwillis" / "openwillis-speech" / "src" / "openwillis" / "speech"
 CHARACTERISTICS_UTIL_PATH = SPEECH_ROOT / "util" / "characteristics_util.py"
 SPEECH_ATTRIBUTE_PATH = SPEECH_ROOT / "speech_attribute.py"
+PAUSE_MODULE_PATH = SPEECH_ROOT / "util" / "speech" / "pause.py"
+LEXICAL_MODULE_PATH = SPEECH_ROOT / "util" / "speech" / "lexical.py"
+COHERENCE_MODULE_PATH = SPEECH_ROOT / "util" / "speech" / "coherence.py"
 
 _PACKAGE_COUNTER = itertools.count()
 
@@ -33,6 +36,123 @@ def _stub_spacy_module():
     spacy_module = types.ModuleType("spacy")
     spacy_module.load = lambda *args, **kwargs: object()
     return spacy_module
+
+
+def _stub_transformers_module():
+    transformers_module = types.ModuleType("transformers")
+
+    class _StubPretrained:
+        @classmethod
+        def from_pretrained(cls, *args, **kwargs):
+            return cls()
+
+    class _StubPipeline:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+    transformers_module.AutoTokenizer = _StubPretrained
+    transformers_module.AutoModelForCausalLM = _StubPretrained
+    transformers_module.AutoModelForSequenceClassification = _StubPretrained
+    transformers_module.BertTokenizer = _StubPretrained
+    transformers_module.BertModel = _StubPretrained
+    transformers_module.BertForMaskedLM = _StubPretrained
+    transformers_module.XLMRobertaTokenizer = _StubPretrained
+    transformers_module.pipeline = lambda *args, **kwargs: _StubPipeline(*args, **kwargs)
+    return transformers_module
+
+
+def _stub_sentence_transformers_module():
+    module = types.ModuleType("sentence_transformers")
+
+    class SentenceTransformer:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+    module.SentenceTransformer = SentenceTransformer
+    return module
+
+
+def _stub_huggingface_hub_module():
+    module = types.ModuleType("huggingface_hub")
+    module.login = lambda *args, **kwargs: None
+    return module
+
+
+def _stub_vader_module():
+    module = types.ModuleType("vaderSentiment")
+    submodule = types.ModuleType("vaderSentiment.vaderSentiment")
+
+    class SentimentIntensityAnalyzer:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    submodule.SentimentIntensityAnalyzer = SentimentIntensityAnalyzer
+    module.vaderSentiment = submodule
+    sys.modules[submodule.__name__] = submodule
+    return module
+
+
+def _stub_lexicalrichness_module():
+    module = types.ModuleType("lexicalrichness")
+
+    class LexicalRichness:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    module.LexicalRichness = LexicalRichness
+    return module
+
+
+def _stub_torch_module():
+    module = types.ModuleType("torch")
+
+    class _Device:
+        def __init__(self, name):
+            self.type = name
+
+        def __repr__(self):
+            return f"device(type={self.type!r})"
+
+    class _Cuda:
+        @staticmethod
+        def is_available():
+            return False
+
+    class _MPS:
+        @staticmethod
+        def is_available():
+            return False
+
+    class _InferenceMode:
+        def __enter__(self):
+            return None
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def __call__(self, fn):
+            return fn
+
+    module.device = _Device
+    module.cuda = _Cuda()
+    module.backends = types.SimpleNamespace(mps=_MPS(), cuda=types.SimpleNamespace(matmul=types.SimpleNamespace(allow_tf32=False)))
+    module.float32 = "float32"
+    module.dtype = type("dtype", (), {})
+    module.Tensor = object
+    module.set_float32_matmul_precision = lambda *args, **kwargs: None
+    module.inference_mode = lambda: _InferenceMode()
+    return module
+
+
+def _install_heavy_runtime_stubs():
+    sys.modules["transformers"] = _stub_transformers_module()
+    sys.modules["sentence_transformers"] = _stub_sentence_transformers_module()
+    sys.modules["huggingface_hub"] = _stub_huggingface_hub_module()
+    sys.modules["vaderSentiment"] = _stub_vader_module()
+    sys.modules["lexicalrichness"] = _stub_lexicalrichness_module()
+    sys.modules["torch"] = _stub_torch_module()
 
 
 def _install_global_stubs():
@@ -114,3 +234,38 @@ def load_local_speech_attribute():
 
     module_name = f"{package_name}.speech.speech_attribute"
     return _load_module(module_name, SPEECH_ATTRIBUTE_PATH)
+
+
+def load_local_pause_module():
+    _install_global_stubs()
+    package_name = f"local_openwillis_speech_test_{next(_PACKAGE_COUNTER)}"
+    _, util_pkg = _build_package_hierarchy(package_name)
+    module_name = f"{package_name}.speech.util.speech.pause"
+    module = _load_module(module_name, PAUSE_MODULE_PATH)
+    sys.modules[module_name] = module
+    util_pkg.speech.pause = module
+    return module
+
+
+def load_local_lexical_module():
+    _install_global_stubs()
+    _install_heavy_runtime_stubs()
+    package_name = f"local_openwillis_speech_test_{next(_PACKAGE_COUNTER)}"
+    _, util_pkg = _build_package_hierarchy(package_name)
+    module_name = f"{package_name}.speech.util.speech.lexical"
+    module = _load_module(module_name, LEXICAL_MODULE_PATH)
+    sys.modules[module_name] = module
+    util_pkg.speech.lexical = module
+    return module
+
+
+def load_local_coherence_module():
+    _install_global_stubs()
+    _install_heavy_runtime_stubs()
+    package_name = f"local_openwillis_speech_test_{next(_PACKAGE_COUNTER)}"
+    _, util_pkg = _build_package_hierarchy(package_name)
+    module_name = f"{package_name}.speech.util.speech.coherence"
+    module = _load_module(module_name, COHERENCE_MODULE_PATH)
+    sys.modules[module_name] = module
+    util_pkg.speech.coherence = module
+    return module

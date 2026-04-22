@@ -7,5 +7,13 @@ __pycache__/
 /tmp/
 /output/
 /sentiment_triplet_inference/outputs
+# /tests/*
 .venv_ci_repro/
 .hf_cache/
+.pytest_cache/
+/graphify-out/
+.graphify_agent_instructions.txt
+.graphify_ast.json
+.graphify_chunk_plan.json
+.graphify_detect.json
+.graphify_uncached.txt

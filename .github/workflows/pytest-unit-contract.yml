@@ -91,7 +91,7 @@ jobs:
           PY
 
       - name: Run runtime readiness suite
-        run: pytest -q tests/runtime
+        run: python -m pytest -q tests/runtime
 
   unit-contract:
     runs-on: macos-15
@@ -118,7 +118,7 @@ jobs:
         run: python -m pip install -r requirements-test.txt
 
       - name: Run unit/contract pytest suite
-        run: pytest -q tests/unit_contract
+        run: python -m pytest -q tests/unit_contract
 
   feature-groups:
     runs-on: macos-15
@@ -194,7 +194,7 @@ jobs:
           PY
 
       - name: Run feature-group tests
-        run: pytest -q tests/feature_groups --language ${{ matrix.language }}
+        run: python -m pytest -q tests/feature_groups --language ${{ matrix.language }}
 
   pipeline-smoke:
     runs-on: macos-15
@@ -270,7 +270,7 @@ jobs:
           PY
 
       - name: Run pipeline smoke tests
-        run: pytest -q tests/pipeline_smoke --language ${{ matrix.language }}
+        run: python -m pytest -q tests/pipeline_smoke --language ${{ matrix.language }}
 
   cross-language-consistency:
     runs-on: macos-15
@@ -343,4 +343,4 @@ jobs:
           PY
 
       - name: Run cross-language consistency tests
-        run: pytest -q tests/cross_language
+        run: python -m pytest -q tests/cross_language

@@ -257,9 +257,9 @@ def get_pause_feature_turn(turn_df, df_diff, turn_list, turn_index, time_index, 
     raw_turn_pause = pd.to_numeric(df_diff_turn[measures["pause"]], errors="coerce")
 
     turn_df = turn_df.reset_index(drop=True)
-    turn_df[measures["turn_pause"]] = raw_turn_pause.clip(lower=0.0)
+    turn_df.loc[:, measures["turn_pause"]] = raw_turn_pause.clip(lower=0.0).to_numpy()
     # Keep overlap signal from raw pauses; zero-gap boundaries are not interruptions.
-    turn_df[measures["interrupt_flag"]] = (raw_turn_pause < 0)
+    turn_df.loc[:, measures["interrupt_flag"]] = (raw_turn_pause < 0).to_numpy()
 
     turn_df = calculate_pause_features_for_turn(df_diff, turn_df, turn_list, turn_index, time_index, measures, language)
     return turn_df

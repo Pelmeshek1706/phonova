@@ -390,6 +390,26 @@ def normalize_whisper_turn_mode(whisper_turn_mode):
         )
     return turn_mode
 
+def _build_whisper_turn_row(item, measures):
+    """Convert a single Whisper segment into one turn row."""
+    words = [w for w in item.get("words", []) if "start" in w]
+    idxs = [w[measures["old_index"]] for w in words]
+    if not idxs:
+        return None
+
+    text = (item.get("text") or "").strip()
+    words_texts = [w.get("word", "") for w in words]
+    phrase_ids, phrase_texts = _extract_phrase_payload(item, idxs, words_texts, text)
+    return {
+        measures["utterance_ids"]: (idxs[0], idxs[-1]),
+        measures["utterance_text"]: text,
+        measures["phrases_ids"]: phrase_ids,
+        measures["phrases_texts"]: phrase_texts,
+        measures["words_ids"]: idxs,
+        measures["words_texts"]: words_texts,
+        measures["speaker_label"]: item.get("speaker"),
+    }
+
 def create_turns_whisper(item_data, measures, whisper_turn_mode="auto"):
     """Convert Whisper segments into the turn-level dataframe schema."""
     data = []

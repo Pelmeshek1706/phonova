@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal, Optional
 
 CoherenceBackendName = Literal["gemma", "bert"]
-WhisperTurnMode = Literal["speaker", "segment"]
+WhisperTurnMode = Literal["auto", "speaker", "segment"]
 
 
 def normalize_language(language: str) -> str:
@@ -26,9 +26,9 @@ def normalize_backend(backend: str) -> str:
 
 def normalize_turn_mode(turn_mode: str) -> str:
     """Normalize and validate the Whisper turn-construction mode."""
-    normalized = (turn_mode or "speaker").strip().lower()
-    if normalized not in {"speaker", "segment"}:
-        raise ValueError("Invalid whisper_turn_mode. Please use 'speaker' or 'segment'.")
+    normalized = (turn_mode or "auto").strip().lower()
+    if normalized not in {"auto", "speaker", "segment"}:
+        raise ValueError("Invalid whisper_turn_mode. Please use 'auto', 'speaker', or 'segment'.")
     return normalized
 
 

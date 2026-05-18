@@ -12,10 +12,12 @@ from openwillis.speech import speech_attribute as legacy_speech
 from openwillis.speech.util import characteristics_util as legacy_cutil
 from openwillis.speech.util.speech.coherence import (
     WORD_STREAM_CHUNK_SIZE,
+    PREVIOUS_SPEAKER_SIMILARITY_MIN_TURN_LENGTH,
     _new_coherence_lists,
     _extend_coherence_lists,
     _normalize_embeddings,
     _cosine_for_offset,
+    _previous_speaker_turn_similarity,
     _phrase_tangeniality_from_embeddings,
     _release_accelerator_cache,
     _word_coherence_from_embeddings,
@@ -44,7 +46,8 @@ class CoherenceAnalyzer:
         self,
         df_list: list,
         utterances_speaker,
-        utterances_filtered,
+        utterances_speaker_filtered,
+        utterances_dialogue_filtered,
         min_coherence_turn_length: int,
         speaker_label: str | None,
     ) -> list:
@@ -56,7 +59,8 @@ class CoherenceAnalyzer:
         )
         df_list = self._apply_phrase_coherence(
             df_list,
-            utterances_filtered,
+            utterances_speaker_filtered,
+            utterances_dialogue_filtered,
             min_coherence_turn_length=min_coherence_turn_length,
             speaker_label=speaker_label,
         )
@@ -148,7 +152,8 @@ class CoherenceAnalyzer:
     def _apply_phrase_coherence(
         self,
         df_list: list,
-        utterances_filtered,
+        utterances_speaker_filtered,
+        utterances_dialogue_filtered,
         min_coherence_turn_length: int,
         speaker_label: str | None,
     ) -> list:
@@ -166,10 +171,11 @@ class CoherenceAnalyzer:
             return df_list
 
         turn_df = self._calculate_turn_coherence(
-            utterances_filtered,
+            utterances_speaker_filtered,
             turn_df,
             min_coherence_turn_length=min_coherence_turn_length,
             speaker_label=speaker_label,
+            dialogue_utterances_filtered=utterances_dialogue_filtered,
         )
 
         for measure in [
@@ -180,6 +186,7 @@ class CoherenceAnalyzer:
             "perplexity_11",
             "perplexity_15",
             "turn_to_turn_tangeniality",
+            "turn_to_previous_speaker_turn_similarity",
         ]:
             if turn_df[self.measures[measure]].isnull().all():
                 continue
@@ -190,6 +197,10 @@ class CoherenceAnalyzer:
             summ_df[self.measures["turn_to_turn_tangeniality_slope"]] = calculate_slope(
                 turn_df[self.measures["turn_to_turn_tangeniality"]]
             )
+        if not turn_df[self.measures["turn_to_previous_speaker_turn_similarity"]].isnull().all():
+            summ_df[self.measures["turn_to_previous_speaker_turn_similarity_slope"]] = calculate_slope(
+                turn_df[self.measures["turn_to_previous_speaker_turn_similarity"]]
+            )
 
         return [word_df, turn_df, summ_df]
 
@@ -199,11 +210,19 @@ class CoherenceAnalyzer:
         turn_df,
         min_coherence_turn_length: int,
         speaker_label: str | None,
+        dialogue_utterances_filtered,
     ):
         """Reproduce legacy turn-level coherence semantics with instance-scoped resources."""
         utterances_texts = utterances_filtered[self.measures["utterance_text"]].values.tolist()
         adjacent_turn_similarity = None
         phrase_embeddings_by_row = {}
+        previous_speaker_turn_similarity_list = _previous_speaker_turn_similarity(
+            dialogue_utterances_filtered,
+            speaker_label,
+            PREVIOUS_SPEAKER_SIMILARITY_MIN_TURN_LENGTH,
+            self.backend.sentence_encoder,
+            self.measures,
+        )
 
         if self.backend.sentence_encoder is not None:
             utterances_embeddings = self.backend.encode_phrases(utterances_texts)
@@ -239,12 +258,12 @@ class CoherenceAnalyzer:
         perplexity_11_list = []
         perplexity_15_list = []
         turn_to_turn_tangeniality_list = []
+        if len(previous_speaker_turn_similarity_list) != len(utterances_filtered):
+            previous_speaker_turn_similarity_list = [np.nan] * len(utterances_filtered)
 
         for i, row in utterances_filtered.iterrows():
             current_speaker = row[self.measures["speaker_label"]]
-            # Preserve the legacy behaviour exactly, even though this shadows the row speaker.
-            current_speaker = speaker_label
-            if current_speaker != speaker_label:
+            if speaker_label is not None and current_speaker != speaker_label:
                 continue
             if len(row[self.measures["words_texts"]]) < min_coherence_turn_length:
                 sentence_tangeniality1_list.append(np.nan)
@@ -287,6 +306,7 @@ class CoherenceAnalyzer:
         turn_df[self.measures["perplexity_11"]] = perplexity_11_list
         turn_df[self.measures["perplexity_15"]] = perplexity_15_list
         turn_df[self.measures["turn_to_turn_tangeniality"]] = turn_to_turn_tangeniality_list
+        turn_df[self.measures["turn_to_previous_speaker_turn_similarity"]] = previous_speaker_turn_similarity_list
         return turn_df
 
     def _calculate_phrase_similarity(
@@ -332,7 +352,7 @@ class SpeechAnalyzer:
         min_coherence_turn_length: int = 5,
         option: str = "coherence",
         feature_groups: Iterable[str] | str | None = None,
-        whisper_turn_mode: str = "speaker",
+        whisper_turn_mode: str = "auto",
     ) -> list:
         """Analyze one transcript while reusing the instance language and backend configuration."""
         df_list = list(legacy_cutil.create_empty_dataframes(self.measures))
@@ -383,16 +403,19 @@ class SpeechAnalyzer:
     ) -> list:
         """Reuse legacy feature extractors around the new coherence orchestrator."""
         groups = self._normalize_feature_groups(feature_groups)
+        want_structure = "structure" in groups
         want_pause = "pause" in groups
         want_repetition = "repetition" in groups
         want_coherence = "coherence" in groups and option == "coherence"
         want_sentiment = "sentiment" in groups or "first_person" in groups
         want_first_person = "first_person" in groups
+        speaker_filter_label = speaker_label
+        coherence_speaker_label = speaker_label
 
         utterances_speaker, json_conf_speaker = legacy_cutil.filter_speaker(
             prepared.utterances,
             prepared.filtered_json,
-            None,
+            speaker_filter_label,
             self.measures,
         )
         text_list, turn_indices = legacy_cutil.create_text_list(
@@ -401,14 +424,21 @@ class SpeechAnalyzer:
             min_turn_length,
             self.measures,
         )
-        utterances_filtered, utterances_speaker_filtered = legacy_cutil.filter_length(
+        utterances_dialogue_filtered, utterances_speaker_filtered = legacy_cutil.filter_length(
             prepared.utterances,
             utterances_speaker,
-            speaker_label,
+            speaker_filter_label,
             min_turn_length,
             self.measures,
         )
 
+        if want_structure:
+            df_list = legacy_cutil.add_phrase_count_features(
+                df_list,
+                utterances_speaker,
+                min_turn_length,
+                self.measures,
+            )
         if want_pause:
             df_list = get_pause_feature(
                 json_conf_speaker,
@@ -425,13 +455,26 @@ class SpeechAnalyzer:
             df_list = self.coherence_analyzer.analyze(
                 df_list,
                 utterances_speaker=utterances_speaker,
-                utterances_filtered=utterances_filtered,
+                utterances_speaker_filtered=utterances_speaker_filtered,
+                utterances_dialogue_filtered=utterances_dialogue_filtered,
                 min_coherence_turn_length=min_coherence_turn_length,
-                speaker_label=speaker_label,
+                speaker_label=coherence_speaker_label,
             )
         if self.settings.language in self.measures["english_langs"] or self.settings.language in {"ua", "uk"}:
             if want_sentiment:
-                df_list = get_sentiment(df_list, text_list, self.measures, lang=self.settings.language)
+                vader_distribution_texts = legacy_cutil.extract_segment_texts_for_speaker(
+                    prepared.raw_json,
+                    speaker_filter_label,
+                    prepared.source,
+                    self.settings.language,
+                )
+                df_list = get_sentiment(
+                    df_list,
+                    text_list,
+                    self.measures,
+                    lang=self.settings.language,
+                    vader_distribution_texts=vader_distribution_texts,
+                )
             if want_first_person:
                 df_list = get_pos_tag(df_list, text_list, self.measures, lang=self.settings.language)
 
@@ -440,7 +483,7 @@ class SpeechAnalyzer:
     def _normalize_feature_groups(self, feature_groups: Iterable[str] | str | None) -> set[str]:
         """Normalize the optional feature group selector to the legacy set-based format."""
         if feature_groups is None:
-            return {"pause", "repetition", "coherence", "sentiment", "first_person"}
+            return {"structure", "pause", "repetition", "coherence", "sentiment", "first_person"}
         if isinstance(feature_groups, str):
             return {feature_groups.strip().lower()}
         return {str(group).strip().lower() for group in feature_groups if group}

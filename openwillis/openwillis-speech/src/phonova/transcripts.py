@@ -18,6 +18,7 @@ class PreparedTranscript:
     """Normalized transcript data ready for downstream feature extraction."""
 
     source: str
+    raw_json: Any
     filtered_json: list[dict[str, Any]]
     utterances: pd.DataFrame
     time_columns: list[str]
@@ -29,7 +30,7 @@ class TranscriptPreprocessor:
     def __init__(self, measures: dict) -> None:
         self.measures = measures
 
-    def prepare(self, json_conf: Any, whisper_turn_mode: str = "speaker") -> PreparedTranscript:
+    def prepare(self, json_conf: Any, whisper_turn_mode: str = "auto") -> PreparedTranscript:
         """Detect transcript origin and return normalized word- and turn-level structures."""
         if legacy_speech.is_whisper_transcribe(json_conf):
             filtered_json, utterances = self._filter_whisper(
@@ -46,6 +47,7 @@ class TranscriptPreprocessor:
 
         return PreparedTranscript(
             source=source,
+            raw_json=json_conf,
             filtered_json=filtered_json,
             utterances=utterances,
             time_columns=legacy_speech.get_time_columns(source),

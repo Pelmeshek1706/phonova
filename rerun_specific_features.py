@@ -32,10 +32,10 @@ for json_file in tqdm(INPUT_DIR.glob('*.json')):
     print(f"Processing file: {name}")
 
     if str(name) in nums:
-        print(f'Пропускаю {name}')
+        print(f'Skipping {name}')
         continue
     try:
-        # 4.1 – Чтение JSON
+        # 4.1 - Read JSON
         with open(json_file, 'r', encoding='utf-8') as f:
             transcript_json = json.load(f)
 
@@ -48,10 +48,10 @@ for json_file in tqdm(INPUT_DIR.glob('*.json')):
         )
     except RuntimeError as rexc:
         # skip.append(str(name))
-        print(f'❌ Пропускаю {json_file} из-за ошибки RuntimeError:')
+        print(f'❌ Skipping {json_file} due to RuntimeError:')
     except Exception as exc:
-        # Если возникла ошибка – выводим трассировку и пропускаем файл
-        print(f'❌ Ошибка при обработке {json_file}:')
+        # If an error occurs, print the traceback and skip the file
+        print(f'❌ Error while processing {json_file}:')
         traceback.print_exc()
         continue
     try:
@@ -116,7 +116,7 @@ for json_file in tqdm(INPUT_DIR.glob('*.json')):
         turns_old.to_csv(turns_path_out, index=False)
         summ_old.to_csv(summ_path_out, index=False)
     except Exception as exc:
-        print(f'❌ Ошибка при сохранении CSV для {name}:')
+        print(f'❌ Error while saving CSVs for {name}:')
         traceback.print_exc()
 
-print('=== Завершено ===')
+print('=== Finished ===')

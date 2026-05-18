@@ -53,6 +53,7 @@ WINDOW_BATCH_SIZE = 512
 MIN_EMBEDDING_BATCH_SIZE = 8
 WORD_STREAM_CHUNK_SIZE = 32
 TOKEN_CACHE_SIZE = int(os.getenv("OPENWILLIS_TOKEN_CACHE_SIZE", "512"))
+PREVIOUS_SPEAKER_SIMILARITY_MIN_TURN_LENGTH = 1
 _PPL_TOKEN_CACHE: "OrderedDict[str, torch.Tensor]" = OrderedDict()
 _BERT_TOKEN_CACHE: "OrderedDict[str, torch.Tensor]" = OrderedDict()
 
@@ -120,6 +121,85 @@ def _cosine_for_offset(normalized_embeddings: np.ndarray, k: int) -> np.ndarray:
     if n <= k:
         return np.zeros((0,), dtype=np.float32)
     return np.einsum("ij,ij->i", normalized_embeddings[:-k], normalized_embeddings[k:]).astype(np.float32)
+
+
+def _adjacent_turn_similarity_from_texts(
+    utterance_texts: List[str],
+    sentence_encoder: Optional[SentenceTransformer],
+) -> Optional[np.ndarray]:
+    """Encode turns and compute cosine similarity with the immediately previous turn."""
+    if sentence_encoder is None or len(utterance_texts) == 0:
+        return None
+
+    utterances_embeddings = sentence_encoder.encode(
+        utterance_texts,
+        convert_to_numpy=True,
+        normalize_embeddings=False,
+    )
+    normalized_turns = _normalize_embeddings(utterances_embeddings)
+    adjacent_turn_similarity = np.full((len(utterance_texts),), np.nan, dtype=np.float32)
+    if normalized_turns.shape[0] > 1:
+        adjacent_turn_similarity[1:] = _cosine_for_offset(normalized_turns, 1)
+    return adjacent_turn_similarity
+
+
+def _previous_speaker_turn_similarity(
+    dialogue_utterances_filtered,
+    speaker_label: Optional[str],
+    previous_speaker_min_turn_length: int,
+    sentence_encoder: Optional[SentenceTransformer],
+    measures: dict,
+) -> List[float]:
+    """
+    Compute similarity between each target-speaker turn and the immediately
+    previous turn from a different speaker in the full dialogue sequence.
+    """
+    if dialogue_utterances_filtered is None or len(dialogue_utterances_filtered) == 0:
+        return []
+
+    if speaker_label is None:
+        target_rows = dialogue_utterances_filtered
+    else:
+        target_rows = dialogue_utterances_filtered[
+            dialogue_utterances_filtered[measures['speaker_label']] == speaker_label
+        ]
+
+    if len(target_rows) == 0:
+        return []
+
+    adjacent_turn_similarity = _adjacent_turn_similarity_from_texts(
+        dialogue_utterances_filtered[measures['utterance_text']].values.tolist(),
+        sentence_encoder,
+    )
+    if adjacent_turn_similarity is None:
+        return [np.nan] * len(target_rows)
+
+    previous_speaker_similarity = []
+    for i, row in dialogue_utterances_filtered.iterrows():
+        current_speaker = row[measures['speaker_label']]
+        if speaker_label is not None and current_speaker != speaker_label:
+            continue
+
+        if len(row[measures['words_texts']]) < previous_speaker_min_turn_length:
+            previous_speaker_similarity.append(np.nan)
+            continue
+
+        if i == 0:
+            previous_speaker_similarity.append(np.nan)
+            continue
+
+        previous_row = dialogue_utterances_filtered.iloc[i - 1]
+        previous_speaker = previous_row[measures['speaker_label']]
+        if (
+            previous_speaker == current_speaker
+            or len(previous_row[measures['words_texts']]) < previous_speaker_min_turn_length
+        ):
+            previous_speaker_similarity.append(np.nan)
+            continue
+
+        previous_speaker_similarity.append(float(adjacent_turn_similarity[i]))
+
+    return previous_speaker_similarity
 
 
 def _word_coherence_from_embeddings(word_embeddings: np.ndarray) -> Tuple[List[float], List[float], List[float], Dict[int, List[float]]]:
@@ -1180,7 +1260,17 @@ def init_model(language, measures):
 
     return sentence_encoder, tokenizer, lm_model
 
-def calculate_turn_coherence(utterances_filtered, turn_df, min_coherence_turn_length, speaker_label, sentence_encoder, lm_model, tokenizer, measures):
+def calculate_turn_coherence(
+    utterances_filtered,
+    turn_df,
+    min_coherence_turn_length,
+    speaker_label,
+    sentence_encoder,
+    lm_model,
+    tokenizer,
+    measures,
+    dialogue_utterances_filtered=None,
+):
     """
     ------------------------------------------------------------------------------------------------------
 
@@ -1216,19 +1306,19 @@ def calculate_turn_coherence(utterances_filtered, turn_df, min_coherence_turn_le
     # speaker_label = ""
     # turn-to-turn tangentiality only needs adjacent cosine similarities
     utterances_texts = utterances_filtered[measures['utterance_text']].values.tolist()
-    adjacent_turn_similarity = None
+    adjacent_turn_similarity = _adjacent_turn_similarity_from_texts(
+        utterances_texts,
+        sentence_encoder,
+    )
     phrase_embeddings_by_row: Dict[object, np.ndarray] = {}
+    previous_speaker_turn_similarity_list = _previous_speaker_turn_similarity(
+        dialogue_utterances_filtered,
+        speaker_label,
+        PREVIOUS_SPEAKER_SIMILARITY_MIN_TURN_LENGTH,
+        sentence_encoder,
+        measures,
+    )
     if sentence_encoder:
-        utterances_embeddings = sentence_encoder.encode(
-            utterances_texts,
-            convert_to_numpy=True,
-            normalize_embeddings=False,
-        )
-        normalized_turns = _normalize_embeddings(utterances_embeddings)
-        adjacent_turn_similarity = np.full((len(utterances_filtered),), np.nan, dtype=np.float32)
-        if normalized_turns.shape[0] > 1:
-            adjacent_turn_similarity[1:] = _cosine_for_offset(normalized_turns, 1)
-
         flat_phrases: List[str] = []
         phrase_row_indices: List[object] = []
         phrase_row_counts: List[int] = []
@@ -1257,12 +1347,13 @@ def calculate_turn_coherence(utterances_filtered, turn_df, min_coherence_turn_le
     sentence_tangeniality1_list, sentence_tangeniality2_list = [], []
     perplexity_list, perplexity_5_list, perplexity_11_list, perplexity_15_list = [], [], [], []
     turn_to_turn_tangeniality_list = []
+    if len(previous_speaker_turn_similarity_list) != len(utterances_filtered):
+        previous_speaker_turn_similarity_list = [np.nan] * len(utterances_filtered)
     for i, row in utterances_filtered.iterrows():
         current_speaker = row[measures['speaker_label']]
-        current_speaker = speaker_label # 
-        if current_speaker != speaker_label:
+        if speaker_label is not None and current_speaker != speaker_label:
             continue
-        elif len(row[measures['words_texts']]) < min_coherence_turn_length:
+        if len(row[measures['words_texts']]) < min_coherence_turn_length:
             sentence_tangeniality1_list.append(np.nan)
             sentence_tangeniality2_list.append(np.nan)
             perplexity_list.append(np.nan)
@@ -1303,10 +1394,19 @@ def calculate_turn_coherence(utterances_filtered, turn_df, min_coherence_turn_le
     turn_df[measures['perplexity_11']] = perplexity_11_list
     turn_df[measures['perplexity_15']] = perplexity_15_list
     turn_df[measures['turn_to_turn_tangeniality']] = turn_to_turn_tangeniality_list
+    turn_df[measures['turn_to_previous_speaker_turn_similarity']] = previous_speaker_turn_similarity_list
 
     return turn_df
 
-def get_phrase_coherence(df_list, utterances_filtered, min_coherence_turn_length, speaker_label, language, measures):
+def get_phrase_coherence(
+    df_list,
+    utterances_filtered,
+    min_coherence_turn_length,
+    speaker_label,
+    language,
+    measures,
+    dialogue_utterances_filtered=None,
+):
     """
     ------------------------------------------------------------------------------------------------------
 
@@ -1354,9 +1454,19 @@ def get_phrase_coherence(df_list, utterances_filtered, min_coherence_turn_length
                 lm_model,
                 tokenizer,
                 measures,
+                dialogue_utterances_filtered=dialogue_utterances_filtered,
             )
 
-            for measure in ['sentence_tangeniality1', 'sentence_tangeniality2', 'perplexity', 'perplexity_5', 'perplexity_11', 'perplexity_15', 'turn_to_turn_tangeniality']:
+            for measure in [
+                'sentence_tangeniality1',
+                'sentence_tangeniality2',
+                'perplexity',
+                'perplexity_5',
+                'perplexity_11',
+                'perplexity_15',
+                'turn_to_turn_tangeniality',
+                'turn_to_previous_speaker_turn_similarity',
+            ]:
                 if turn_df[measures[measure]].isnull().all():
                     continue
                 summ_df[measures[measure + '_mean']] = turn_df[measures[measure]].mean(skipna=True)
@@ -1364,6 +1474,10 @@ def get_phrase_coherence(df_list, utterances_filtered, min_coherence_turn_length
 
             if not turn_df[measures['turn_to_turn_tangeniality']].isnull().all():
                 summ_df[measures['turn_to_turn_tangeniality_slope']] = calculate_slope(turn_df[measures['turn_to_turn_tangeniality']])
+            if not turn_df[measures['turn_to_previous_speaker_turn_similarity']].isnull().all():
+                summ_df[measures['turn_to_previous_speaker_turn_similarity_slope']] = calculate_slope(
+                    turn_df[measures['turn_to_previous_speaker_turn_similarity']]
+                )
 
         df_list = [word_df, turn_df, summ_df]
     except Exception as e:

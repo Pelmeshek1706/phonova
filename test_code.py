@@ -1971,9 +1971,9 @@ transcript_json_ua_3 = {'text': " Мій еней був парабок мото
 # -*- coding: utf-8 -*-
 
 # """
-# Пакетный обработчик Whisper‑transcripts.
-# Считывает JSON‑файлы из каталога woz_eng_whisper,
-# вызывает функцию ows.speech_characteristics и сохраняет результаты в CSV‑формате.
+# Batch processor for Whisper transcripts.
+# Reads JSON files from the woz_eng_whisper directory,
+# runs ows.speech_characteristics, and saves the results as CSV files.
 # """
 
 import os
@@ -1983,15 +1983,15 @@ from pathlib import Path
 from tqdm import tqdm
 from datetime import datetime
 # ------------------------------------------------------------------
-# 1️⃣ Подготовка окружения (если ещё не сделано)
+# 1️⃣ Prepare the environment (if not done yet)
 # ------------------------------------------------------------------
-# Если вы используете SSL‑сертификаты, можно установить переменную:
+# If you use SSL certificates, you can set the environment variable:
 # os.environ['SSL_CERT_FILE'] = certifi.where()
 print("kernel is ...")
 import sys
 print(sys.executable)
 # ------------------------------------------------------------------
-# 2️⃣ Импортируем нужные модули
+# 2️⃣ Import the required modules
 # ------------------------------------------------------------------
 import openwillis.speech as ows
 import torch
@@ -2002,60 +2002,61 @@ from openwillis.speech.util.speech import coherence
 coherence.COHERENCE_BACKEND = "gemma"   # or "gemma"
 print(f"Using coherence backend: {coherence.COHERENCE_BACKEND}")
 # ------------------------------------------------------------------
-# 3️⃣ Путь к входным и выходным каталогам
+# 3️⃣ Paths to the input and output directories
 # ------------------------------------------------------------------
-INPUT_DIR   = Path('/Users/pelmeshek1706/Desktop/projects/final_airest_voice/airest/tmp/role_labeled_whisper_like_stub_batch_eng_26-03-2026')
-OUTPUT_DIR  = Path('/Users/pelmeshek1706/Desktop/projects/final_airest_voice/airest/tmp/result_phonoma_gemma_eng_26-03-2026')
+INPUT_DIR   = Path('/Users/pelmeshek1706/Desktop/projects/final_airest_voice/airest/tmp/role_labeled_whisper_like_stub_batch_ukr_26-03-2026')
+OUTPUT_DIR  = Path('/Users/pelmeshek1706/Desktop/projects/final_airest_voice/airest/tmp/result_phonoma_gemma_ukr_3-04-2026_fix')
 
 # nums = ['380', '396', '379', '441', '482', '695', '656', '683', '457', '314', '713', '338', '601', '416', '400']
+# nums = ['381', '380', '343', '355', '396', '397', '354', '436', '378', '620', '379', '437', '421', '637', '636', '420', '335', '334', '322', '323', '441', '482', '657', '695', '656', '483', '440', '708', '456', '318', '640', '683', '682', '641', '319', '457', '709', '314', '315', '705', '713', '303', '698', '699', '302', '712', '676', '689', '677', '461', '477', '339', '661', '660', '338', '476', '363', '362', '374', '375', '417', '359', '601', '600', '358', '416', '400', '617', '401']
 nums = []
 oom = []# not enought memmory '380', '698'
 
 # skip = ['380', '640', '362', '323', '374', '636', '661', '417', '315'] # '380'
-# Создаём выходной каталог, если он ещё не существует
+# Create the output directory if it does not exist yet
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 # ------------------------------------------------------------------
-# 4️⃣ Обрабатываем каждый JSON‑файл
+# 4️⃣ Process each JSON file
 # ------------------------------------------------------------------
 for json_file in tqdm(INPUT_DIR.glob('*.json')):
-    # Имя файла без расширения (например, '300')
+    # Filename without the extension (for example, '300')
     name = json_file.stem
 
-    print(f'Обрабатываю {json_file} → {name}')
+    print(f'Processing {json_file} -> {name}')
     if str(name) in nums and str(name) not in oom:
-        print(f'Пропускаю {name}')
+        print(f'Skipping {name}')
         continue
     # if str(name) in skip:
     #     print(f'Skipping {name}')
     #     continue
      # ------------------------------------------------------------------
     try:
-        # 4.1 – Чтение JSON
+        # 4.1 - Read JSON
         with open(json_file, 'r', encoding='utf-8') as f:
             transcript_json = json.load(f)
 
-        # 4.2 – Вызов функции OpenWillis
+        # 4.2 - Call the OpenWillis function
         words, turns, summary_sc = ows.speech_characteristics(
                                 json_conf=transcript_json,
                                 option="coherence",
-                                language="en",
+                                language="ua",
                                 speaker_label="participant",
                                 min_coherence_turn_length=2,
-                                whisper_turn_mode="segment",
+                                whisper_turn_mode="speaker",
                             )
 
 
     except RuntimeError as rexc:
         # skip.append(str(name))
-        print(f'❌ Пропускаю {json_file} из-за ошибки RuntimeError:')
+        print(f'❌ Skipping {json_file} due to RuntimeError:')
     except Exception as exc:
-        # Если возникла ошибка – выводим трассировку и пропускаем файл
-        print(f'❌ Ошибка при обработке {json_file}:')
+        # If an error occurs, print the traceback and skip the file
+        print(f'❌ Error while processing {json_file}:')
         traceback.print_exc()
         continue
     
     # ------------------------------------------------------------------
-    # 5️⃣ Сохраняем результаты в CSV‑файлы
+    # 5️⃣ Save the results as CSV files
     # ------------------------------------------------------------------
     try:
         words.to_csv(OUTPUT_DIR / f'words_{name}.csv', index=False)

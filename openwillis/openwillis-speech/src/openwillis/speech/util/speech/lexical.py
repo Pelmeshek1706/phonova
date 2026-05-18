@@ -92,6 +92,15 @@ VADER_SENTIMENT_COLS = {
     "compound": "sentiment_vader_overall",
 }
 
+VADER_HIST_BIN_KEYS = tuple(f"vader_hist_bin_{idx:02d}" for idx in range(1, 24))
+VADER_DISTRIBUTION_KEYS = VADER_HIST_BIN_KEYS + (
+    "vader_hist_entropy",
+    "vader_neg_tail_mass",
+    "vader_pos_tail_mass",
+    "vader_neutral_mass",
+    "participant_utterance_count",
+)
+
 FIRST_PERSON_VADER_COLS = {
     "positive": "first_person_sentiment_positive_vader",
     "negative": "first_person_sentiment_negative_vader",
@@ -302,6 +311,51 @@ def _sentiment_values(scores: dict) -> List[float]:
         scores.get("pos", np.nan),
         scores.get("compound", np.nan),
     ]
+
+def _measure_name(measures: Optional[dict], key: str) -> str:
+    """Resolve an output column name through the Phonova measure schema."""
+    return measures.get(key, key) if measures is not None else key
+
+def build_vader_distribution_features(scores: List[float], measures: Optional[dict] = None) -> Dict[str, float]:
+    """Build the paper VADER histogram/tail features from utterance compound scores."""
+    feature_names = [_measure_name(measures, key) for key in VADER_HIST_BIN_KEYS]
+    entropy_name = _measure_name(measures, "vader_hist_entropy")
+    neg_tail_name = _measure_name(measures, "vader_neg_tail_mass")
+    pos_tail_name = _measure_name(measures, "vader_pos_tail_mass")
+    neutral_name = _measure_name(measures, "vader_neutral_mass")
+    count_name = _measure_name(measures, "participant_utterance_count")
+
+    score_array = pd.to_numeric(pd.Series(scores, dtype="object"), errors="coerce").to_numpy(dtype=float)
+    score_array = score_array[np.isfinite(score_array)]
+    if score_array.size == 0:
+        features = {name: np.nan for name in feature_names}
+        features.update(
+            {
+                entropy_name: np.nan,
+                neg_tail_name: np.nan,
+                pos_tail_name: np.nan,
+                neutral_name: np.nan,
+                count_name: 0.0,
+            }
+        )
+        return features
+
+    hist_counts, _ = np.histogram(score_array, bins=23, range=(-1.0, 1.0))
+    hist_probs = hist_counts.astype(float) / float(score_array.size)
+    positive_probs = hist_probs[hist_probs > 0.0]
+    entropy = -float(np.sum(positive_probs * np.log(positive_probs)))
+
+    features = {name: float(prob) for name, prob in zip(feature_names, hist_probs)}
+    features.update(
+        {
+            entropy_name: entropy,
+            neg_tail_name: float(np.mean(score_array < -0.5)),
+            pos_tail_name: float(np.mean(score_array > 0.5)),
+            neutral_name: float(np.mean(np.abs(score_array) <= 0.05)),
+            count_name: float(score_array.size),
+        }
+    )
+    return features
 
 def _count_turn_tokens(text: str, tokenizer) -> float:
     """Count tokenizer tokens for a turn without adding special tokens."""
@@ -1004,6 +1058,7 @@ def get_sentiment(
     lang='en',
     summary_sentiment_alpha: float = DEFAULT_SUMMARY_SENTIMENT_ALPHA,
     summary_sentiment_eps: float = DEFAULT_SUMMARY_SENTIMENT_EPS,
+    vader_distribution_texts: Optional[List[str]] = None,
 ):
     """
     ------------------------------------------------------------------------------------------------------
@@ -1028,6 +1083,9 @@ def get_sentiment(
         Length-strength weight parameter (alpha). Default is 0.0 (uniform weights).
     summary_sentiment_eps: float
         Small constant added to turn lengths before exponentiation.
+    vader_distribution_texts: list[str] | None
+        Optional raw utterance/segment texts for the paper VADER distribution
+        features. When omitted, the distribution falls back to turn_list.
 
     Returns:
     ...........
@@ -1100,6 +1158,15 @@ def get_sentiment(
         summ_df.loc[0, sentiment_cols] = _sentiment_values(sentiment_dict)
         summ_df.loc[0, mattr_cols] = mattrs
         summ_df.loc[0, vader_cols] = _sentiment_values(vader_dict)
+        distribution_texts = vader_distribution_texts if vader_distribution_texts is not None else turn_list
+        vader_compound_scores = [
+            float(vader_sentiment.polarity_scores(text)["compound"])
+            for text in distribution_texts
+            if isinstance(text, str) and text.strip()
+        ]
+        vader_distribution = build_vader_distribution_features(vader_compound_scores, measures)
+        for column, value in vader_distribution.items():
+            summ_df.loc[0, column] = value
         df_list = [word_df, turn_df, summ_df]
     except Exception as e:
         logger.info(f"Error in sentiment feature calculation: {e}")

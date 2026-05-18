@@ -1,0 +1,152 @@
+AIREST Non-Commercial Research License v1.0
+
+Copyright (c) 2026 The AIREST Authors
+All rights reserved.
+
+This license applies to the AIREST software and accompanying documentation in
+this repository, except for third-party components that are explicitly provided
+under separate license terms.
+
+1. Definitions
+
+"Authors" or "Licensor" means the copyright holder(s) identified in this
+repository, the accompanying article, the README, or in the written permission
+grant provided with access to the Software.
+
+"Software" means the source code, scripts, models, pipelines, and accompanying
+documentation made available in this repository, excluding Third-Party
+Materials.
+
+"Research Use" means non-commercial academic or scientific research,
+verification, replication, benchmarking, and scholarly evaluation conducted
+solely for research purposes. Research Use does not include product
+development, service delivery, operational deployment, commercial consulting,
+clinical use, or any use on behalf of a for-profit entity unless the Licensor
+has expressly authorized that use in writing.
+
+"Commercial Use" means any use for commercial advantage or monetary
+compensation, and any use by, for, or on behalf of a for-profit entity,
+including internal research and development, product design, model training for
+commercial systems, SaaS, consulting, paid services, marketing, advertising,
+compliance, or business decision-making.
+
+"Third-Party Materials" means software, datasets, models, or other materials in
+this repository or used by the Software that are subject to separate license
+terms.
+
+2. Prior Written Permission Required
+
+No license is granted unless and until you have received prior written
+permission from the Licensor to access or use the Software. If you do not have
+such written permission, you have no right to use, copy, modify, distribute,
+publish, host, or otherwise exploit the Software.
+
+Any written permission granted by the Licensor may limit the approved users,
+institution, project, duration, or scope of use. Those written permission terms
+supplement this license and control in the event of conflict.
+
+3. Limited License Grant
+
+Subject to Section 2 and your ongoing compliance with this license, the
+Licensor grants you a limited, revocable, non-exclusive, non-transferable, and
+non-sublicensable license to:
+
+- use the Software;
+- make a reasonable number of internal copies of the Software; and
+- modify the Software internally,
+
+solely for Research Use and solely within the scope of the written permission
+granted by the Licensor.
+
+4. Conditions of Use
+
+You may exercise the limited rights above only if all of the following
+conditions are met:
+
+a. Attribution. You must preserve all copyright, authorship, attribution, and
+license notices in the Software and in any permitted internal copies.
+
+b. Citation. In any paper, preprint, thesis, report, presentation, or other
+scholarly output that uses or is based on the Software, you must acknowledge
+the AIREST Authors and cite the associated article or repository as identified
+by the Licensor.
+
+c. Scope. Your use must remain strictly limited to Research Use.
+
+d. Access control. You must not provide access to the Software to any person or
+entity that is not covered by the Licensor's written permission.
+
+5. Restrictions
+
+You may not, and may not permit any third party to:
+
+a. use the Software for any Commercial Use;
+
+b. distribute, sublicense, sell, rent, lease, lend, transfer, assign, publish,
+or otherwise make the Software available to any third party;
+
+c. provide the Software, or any modified version of it, as a hosted service,
+API, shared repository, public demo, or downloadable artifact;
+
+d. remove, alter, obscure, or falsify any attribution, authorship, copyright,
+or license notices;
+
+e. use the Software for clinical, diagnostic, therapeutic, employment,
+insurance, educational assessment, law-enforcement, surveillance, or other
+high-impact decision-making purposes regarding identifiable individuals;
+
+f. represent outputs of the Software as medical, psychological, psychiatric, or
+other professional advice; or
+
+g. use the Software in any manner that violates applicable law, research ethics
+requirements, institutional review obligations, data protection obligations, or
+the terms of any applicable dataset or third-party dependency.
+
+6. Modifications and Derivative Works
+
+You may create internal modifications solely for permitted Research Use.
+Modified versions and derivative works remain subject to this license, may not
+be distributed, and may not be used outside the scope of the Licensor's written
+permission.
+
+7. Third-Party Materials
+
+This license does not alter or replace the license terms of any Third-Party
+Materials. You are solely responsible for reviewing and complying with all
+third-party license terms. For clarity, the `openwillis/` subtree and any other
+components carrying their own license notices remain governed by those separate
+terms.
+
+8. Ownership
+
+The Software is licensed, not sold. Except for the limited rights expressly
+granted in this license, the Licensor retains all right, title, and interest in
+and to the Software. No implied licenses are granted.
+
+9. Termination
+
+This license terminates automatically and immediately if you breach any term of
+this license or exceed the scope of the Licensor's written permission. Upon
+termination, you must immediately stop using the Software and destroy all
+copies in your possession or control, except to the extent retention is
+required by law.
+
+10. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING
+WITHOUT LIMITATION ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, PERFORMANCE, OR RESULTS.
+
+11. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR SHALL NOT BE
+LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR
+PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, PROFITS, REVENUE, GOODWILL, OR
+BUSINESS INTERRUPTION, ARISING OUT OF OR RELATING TO THE SOFTWARE OR THIS
+LICENSE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+12. Commercial or Other Uses
+
+Any use outside the scope of this license, including any Commercial Use,
+requires a separate written agreement signed by the Licensor.

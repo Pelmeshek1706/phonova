@@ -118,7 +118,7 @@ def filter_transcribe(json_conf, measures):
 
     return filter_json, utterances
 
-def filter_whisper(json_conf, measures, whisper_turn_mode="speaker"):
+def filter_whisper(json_conf, measures, whisper_turn_mode="auto"):
     """
     ------------------------------------------------------------------------------------------------------
 
@@ -133,9 +133,9 @@ def filter_whisper(json_conf, measures, whisper_turn_mode="speaker"):
     measures: dict
         A dictionary containing the names of the columns in the output dataframes.
     whisper_turn_mode: str
-        Whisper turn construction strategy. `"speaker"` groups consecutive
-        same-speaker segments into one turn. `"segment"` keeps every segment as
-        a separate turn.
+        Whisper turn construction mode:
+        "auto" keeps the current behavior, "speaker" groups consecutive segments
+        by speaker, and "segment" keeps one segment per turn.
 
     Returns:
     ...........
@@ -154,7 +154,11 @@ def filter_whisper(json_conf, measures, whisper_turn_mode="speaker"):
     item_data = json_conf["segments"]
 
     item_data = cutil.create_index_column(item_data, measures)
-    utterances = cutil.create_turns_whisper(item_data, measures, whisper_turn_mode=whisper_turn_mode)
+    utterances = cutil.create_turns_whisper(
+        item_data,
+        measures,
+        whisper_turn_mode=whisper_turn_mode,
+    )
     
     filter_json = cutil.filter_json_transcribe(item_data, measures)
 
@@ -266,7 +270,7 @@ def process_transcript(
     language,
     option,
     feature_groups=None,
-    whisper_turn_mode="speaker",
+    whisper_turn_mode="auto",
 ):
     """
     ------------------------------------------------------------------------------------------------------
@@ -296,9 +300,11 @@ def process_transcript(
             can be 'simple' or 'coherence'
     feature_groups: list[str] | set[str] | None
         Optional feature group selector. When provided, only these groups are computed.
-        Supported groups: "pause", "repetition", "coherence", "sentiment", "first_person".
+        Supported groups: "structure", "pause", "repetition", "coherence", "sentiment", "first_person".
     whisper_turn_mode: str
-        Whisper turn construction strategy. Ignored for non-Whisper payloads.
+        Whisper turn construction mode:
+        "auto" keeps the current behavior, "speaker" groups consecutive segments
+        by speaker, and "segment" keeps one segment per turn.
     
     Returns:
     ...........
@@ -330,6 +336,10 @@ def process_transcript(
             option,
             measures,
             feature_groups=feature_groups,
+            speaker_filter_label=speaker_label,
+            coherence_speaker_label=speaker_label,
+            raw_json_conf=json_conf,
+            source=source,
         )
     return df_list
 
@@ -364,7 +374,7 @@ def speech_characteristics(
     min_coherence_turn_length=5,
     option='coherence',
     feature_groups=None,
-    whisper_turn_mode="speaker",
+    whisper_turn_mode="auto",
 ):
     """
     ------------------------------------------------------------------------------------------------------
@@ -388,11 +398,25 @@ def speech_characteristics(
          can be 'simple' or 'coherence'
     feature_groups: list[str] | set[str] | None
         Optional feature group selector. When provided, only these groups are computed.
-        Supported groups: "pause", "repetition", "coherence", "sentiment", "first_person".
+        Supported groups: "structure", "pause", "repetition", "coherence", "sentiment", "first_person".
     whisper_turn_mode: str
-        Whisper turn construction strategy. `"speaker"` preserves legacy
-        grouping by contiguous speaker turns, while `"segment"` keeps Whisper
-        segments as individual turns.
+        Whisper turn construction mode.
+        Supported values:
+        "auto":
+            Default Whisper behavior. If diarization labels are present, consecutive
+            segments are merged into speaker turns. Downstream language/coherence
+            features continue to respect `speaker_label` when it is provided. If
+            diarization labels are absent, this falls back to one-segment-per-turn
+            behavior.
+        "speaker":
+            Force diarized speaker turns by merging consecutive Whisper segments with
+            the same speaker label. Downstream language/coherence features continue
+            to respect `speaker_label`, while `speaker_percentage` still reflects
+            the requested `speaker_label`.
+        "segment":
+            Keep each Whisper segment as its own turn. Downstream language/coherence
+            features continue to respect `speaker_label` when it is provided, so
+            segment and speaker modes differ only in turn construction.
 
     Returns:
     ...........
@@ -410,6 +434,7 @@ def speech_characteristics(
         print("Try edit function....")
         # Load configuration measures
         measures = get_config(os.path.abspath(__file__), "text.json")
+        whisper_turn_mode = cutil.normalize_whisper_turn_mode(whisper_turn_mode)
         df_list = cutil.create_empty_dataframes(measures)
 
         if option  not in ['simple', 'coherence']:

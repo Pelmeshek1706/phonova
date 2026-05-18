@@ -338,6 +338,8 @@ def process_transcript(
             feature_groups=feature_groups,
             speaker_filter_label=speaker_label,
             coherence_speaker_label=speaker_label,
+            raw_json_conf=json_conf,
+            source=source,
         )
     return df_list
 

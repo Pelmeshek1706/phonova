@@ -77,6 +77,43 @@ def test_add_phrase_count_features_uses_valid_turns_only():
     assert summ_df.loc[0, measures["phrase_count_mean"]] == 1.5
 
 
+def test_extract_segment_texts_prefers_paper_language_text_fields():
+    payload = {
+        "segments": [
+            {
+                "id": 2,
+                "start": 2.0,
+                "role": "participant",
+                "source_text_en": "english second",
+                "text": "ukrainian second",
+            },
+            {
+                "id": 1,
+                "start": 1.0,
+                "speaker": "participant",
+                "source_text_en": "english first",
+                "text": "ukrainian first",
+            },
+            {
+                "id": 3,
+                "start": 3.0,
+                "speaker": "interviewer",
+                "source_text_en": "question",
+                "text": "question uk",
+            },
+        ]
+    }
+
+    assert cutil.extract_segment_texts_for_speaker(payload, "participant", source="whisper", language="en") == [
+        "english first",
+        "english second",
+    ]
+    assert cutil.extract_segment_texts_for_speaker(payload, "participant", source="whisper", language="uk") == [
+        "ukrainian first",
+        "ukrainian second",
+    ]
+
+
 class FakeTokenizer:
     def __call__(self, text, **_kwargs):
         return {"input_ids": str(text).split()}
@@ -111,9 +148,10 @@ def test_get_sentiment_populates_vader_distribution_features(monkeypatch):
 
     _, _, summ_df = lexical.get_sentiment(
         [word_df, turn_df, summ_df],
-        [[], ["bad", "okay", "good"], "bad okay good"],
+        [[], ["bad okay good"], "bad okay good"],
         measures,
         lang="en",
+        vader_distribution_texts=["bad", "okay", "good"],
     )
 
     hist_cols = [measures[f"vader_hist_bin_{idx:02d}"] for idx in range(1, 24)]

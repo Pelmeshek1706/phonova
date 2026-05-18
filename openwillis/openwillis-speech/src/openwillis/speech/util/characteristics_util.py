@@ -663,6 +663,64 @@ def add_phrase_count_features(df_list, utterances_speaker, min_turn_length, meas
 
     return [word_df, turn_df, summ_df]
 
+def extract_segment_texts_for_speaker(json_conf, speaker_label=None, source="whisper", language=None):
+    """
+    Extract raw segment texts for utterance-distribution features.
+    """
+    if not isinstance(json_conf, dict):
+        return None
+
+    if source == "whisper":
+        segments = json_conf.get("segments")
+    elif source == "aws":
+        segments = json_conf.get("items")
+    else:
+        segments = json_conf.get("result") or json_conf.get("segments")
+
+    if not isinstance(segments, list):
+        return None
+
+    def segment_role(segment):
+        return str(
+            segment.get("role")
+            or segment.get("speaker")
+            or segment.get("speaker_label")
+            or segment.get("turn_role_decision")
+            or ""
+        ).strip()
+
+    def sort_key(segment):
+        start = segment.get("start")
+        if start is None:
+            start = segment.get("start_time")
+        try:
+            start_value = float(start)
+        except (TypeError, ValueError):
+            start_value = np.inf
+        try:
+            id_value = int(segment.get("id", 0))
+        except (TypeError, ValueError):
+            id_value = 0
+        return start_value, id_value
+
+    texts = []
+    for segment in sorted(segments, key=sort_key):
+        if speaker_label is not None and segment_role(segment).lower() != str(speaker_label).strip().lower():
+            continue
+        alternatives = segment.get("alternatives")
+        alternative_text = ""
+        if isinstance(alternatives, list) and alternatives:
+            alternative_text = alternatives[0].get("content", "")
+        if str(language or "").lower() in {"uk", "ua"}:
+            text = segment.get("text") or segment.get("source_text_en") or alternative_text
+        else:
+            text = segment.get("source_text_en") or segment.get("text") or alternative_text
+        text = str(text).strip()
+        if text:
+            texts.append(text)
+
+    return texts
+
 def filter_speaker(utterances, json_conf, speaker_label, measures):
     """
     ------------------------------------------------------------------------------------------------------
@@ -755,6 +813,8 @@ def process_language_feature(
     feature_groups=None,
     speaker_filter_label=None,
     coherence_speaker_label=None,
+    raw_json_conf=None,
+    source=None,
 ):
     """
     ------------------------------------------------------------------------------------------------------
@@ -789,6 +849,10 @@ def process_language_feature(
     coherence_speaker_label: str | None
         Speaker scope for phrase coherence. When None, phrase coherence is
         computed over the full dialogue turn sequence.
+    raw_json_conf: dict | None
+        Original transcript payload, used for raw-segment distribution features.
+    source: str | None
+        Transcript source name.
     measures: dict
         A dictionary containing the names of the columns in the output dataframes.
 
@@ -855,7 +919,19 @@ def process_language_feature(
 
     if language in measures["english_langs"] or language in ['uk', 'ua']:
         if want_sentiment:
-            df_list = get_sentiment(df_list, text_list, measures, lang=language)
+            vader_distribution_texts = extract_segment_texts_for_speaker(
+                raw_json_conf,
+                speaker_filter_label,
+                source,
+                language,
+            )
+            df_list = get_sentiment(
+                df_list,
+                text_list,
+                measures,
+                lang=language,
+                vader_distribution_texts=vader_distribution_texts,
+            )
         if want_first_person:
             df_list = get_pos_tag(df_list, text_list, measures, lang=language)
 

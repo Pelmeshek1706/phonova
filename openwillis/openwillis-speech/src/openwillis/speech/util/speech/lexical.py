@@ -1058,6 +1058,7 @@ def get_sentiment(
     lang='en',
     summary_sentiment_alpha: float = DEFAULT_SUMMARY_SENTIMENT_ALPHA,
     summary_sentiment_eps: float = DEFAULT_SUMMARY_SENTIMENT_EPS,
+    vader_distribution_texts: Optional[List[str]] = None,
 ):
     """
     ------------------------------------------------------------------------------------------------------
@@ -1082,6 +1083,9 @@ def get_sentiment(
         Length-strength weight parameter (alpha). Default is 0.0 (uniform weights).
     summary_sentiment_eps: float
         Small constant added to turn lengths before exponentiation.
+    vader_distribution_texts: list[str] | None
+        Optional raw utterance/segment texts for the paper VADER distribution
+        features. When omitted, the distribution falls back to turn_list.
 
     Returns:
     ...........
@@ -1108,7 +1112,6 @@ def get_sentiment(
             VADER_SENTIMENT_COLS["compound"],
         ]
         turn_token_counts: Dict[int, float] = {}
-        vader_compound_scores: List[float] = []
 
         for idx, u in enumerate(turn_list):
             turn_token_counts[idx] = _count_turn_tokens(u, sentiment.tokenizer)
@@ -1118,8 +1121,6 @@ def get_sentiment(
                 mattrs = get_mattrs(u, lemmatizer, window_sizes=MATTR_WINDOWS)
                 turn_df.loc[idx, cols] = _sentiment_values(sentiment_dict) + mattrs
                 turn_df.loc[idx, vader_cols] = _sentiment_values(vader_dict)
-                if isinstance(u, str) and u.strip():
-                    vader_compound_scores.append(float(vader_dict.get("compound", np.nan)))
 
             except Exception as e:
                 logger.info(f"Error in sentiment analysis: {e}")
@@ -1157,6 +1158,12 @@ def get_sentiment(
         summ_df.loc[0, sentiment_cols] = _sentiment_values(sentiment_dict)
         summ_df.loc[0, mattr_cols] = mattrs
         summ_df.loc[0, vader_cols] = _sentiment_values(vader_dict)
+        distribution_texts = vader_distribution_texts if vader_distribution_texts is not None else turn_list
+        vader_compound_scores = [
+            float(vader_sentiment.polarity_scores(text)["compound"])
+            for text in distribution_texts
+            if isinstance(text, str) and text.strip()
+        ]
         vader_distribution = build_vader_distribution_features(vader_compound_scores, measures)
         for column, value in vader_distribution.items():
             summ_df.loc[0, column] = value

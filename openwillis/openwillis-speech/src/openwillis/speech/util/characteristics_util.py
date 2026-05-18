@@ -55,6 +55,8 @@ def create_empty_dataframes(measures):
                                     measures["neu_vader"], measures["compound_vader"], measures["speech_mattr_5"],
                                     measures["speech_mattr_10"], measures["speech_mattr_25"], measures["speech_mattr_50"], measures["speech_mattr_100"],
                                     measures["first_person_percentage"], measures["first_person_sentiment_positive"], measures["first_person_sentiment_negative"],
+                                    measures["first_person_sentiment_positive_vader"], measures["first_person_sentiment_negative_vader"],
+                                    measures["first_person_sentiment_overall_vader"], measures["phrase_count"],
                                     measures["word_repeat_percentage"], measures["phrase_repeat_percentage"],
                                     measures["sentence_tangeniality1"], measures["sentence_tangeniality2"],
                                     measures["turn_to_turn_tangeniality"], measures["turn_to_previous_speaker_turn_similarity"], measures["perplexity"],
@@ -66,9 +68,14 @@ def create_empty_dataframes(measures):
                 measures["syllable_rate"], measures["word_pause_mean"], measures["word_pause_var"], 
                 measures["speech_percentage"], measures["pos"], measures["neg"], measures["neu"], measures["compound"],
                 measures["pos_vader"], measures["neg_vader"], measures["neu_vader"], measures["compound_vader"],
+                *[measures[f"vader_hist_bin_{idx:02d}"] for idx in range(1, 24)],
+                measures["vader_hist_entropy"], measures["vader_neg_tail_mass"], measures["vader_pos_tail_mass"],
+                measures["vader_neutral_mass"], measures["participant_utterance_count"],
                 measures["speech_mattr_5"], measures["speech_mattr_10"], measures["speech_mattr_25"], measures["speech_mattr_50"], measures["speech_mattr_100"],
                 measures["first_person_percentage"], measures["prop_verb_past"], measures["prop_function_words"], measures["first_person_sentiment_positive"],
                 measures["first_person_sentiment_negative"], measures["first_person_sentiment_overall"],
+                measures["first_person_sentiment_positive_vader"], measures["first_person_sentiment_negative_vader"],
+                measures["first_person_sentiment_overall_vader"],
                 measures["word_repeat_percentage"], measures["phrase_repeat_percentage"],
                 measures["word_coherence_mean"], measures["word_coherence_var"],
                 measures["word_coherence_5_mean"], measures["word_coherence_5_var"],
@@ -82,8 +89,9 @@ def create_empty_dataframes(measures):
                 measures["word_coherence_variability_8_mean"], measures["word_coherence_variability_8_var"],
                 measures["word_coherence_variability_9_mean"], measures["word_coherence_variability_9_var"],
                 measures["word_coherence_variability_10_mean"], measures["word_coherence_variability_10_var"],
-                measures["num_turns"], measures["num_one_word_turns"], measures["turn_minutes_mean"],
-                measures["turn_words_mean"], measures["turn_pause_mean"], measures["speaker_percentage"], 
+                measures["num_turns"], measures["num_one_word_turns"], measures["num_phrases"],
+                measures["num_one_word_phrases"], measures["turn_minutes_mean"],
+                measures["turn_words_mean"], measures["phrase_count_mean"], measures["turn_pause_mean"], measures["speaker_percentage"],
                 measures["sentence_tangeniality1_mean"], measures["sentence_tangeniality1_var"],
                 measures["sentence_tangeniality2_mean"], measures["sentence_tangeniality2_var"],
                 measures["turn_to_turn_tangeniality_mean"], measures["turn_to_turn_tangeniality_var"],
@@ -622,6 +630,39 @@ def create_text_list(utterances_speaker, speaker_label, min_turn_length, measure
 
     return text_list, turn_indices
 
+def add_phrase_count_features(df_list, utterances_speaker, min_turn_length, measures):
+    """
+    Populate turn-level and summary-level phrase-count features.
+    """
+    word_df, turn_df, summ_df = df_list
+
+    valid_turns = utterances_speaker[
+        utterances_speaker[measures["words_texts"]].apply(len) >= min_turn_length
+    ].reset_index(drop=True)
+
+    phrase_counts = valid_turns[measures["phrases_texts"]].apply(
+        lambda phrases: len(phrases) if isinstance(phrases, (list, tuple, np.ndarray)) else 0
+    )
+    one_word_phrase_counts = valid_turns[measures["phrases_texts"]].apply(
+        lambda phrases: sum(
+            1
+            for phrase in phrases
+            if isinstance(phrase, str) and len(phrase.split()) == 1
+        )
+        if isinstance(phrases, (list, tuple, np.ndarray))
+        else 0
+    )
+
+    turn_df = turn_df.reset_index(drop=True)
+    turn_df[measures["phrase_count"]] = phrase_counts.to_numpy(dtype=float)
+
+    if len(phrase_counts) > 0:
+        summ_df.loc[0, measures["num_phrases"]] = int(phrase_counts.sum())
+        summ_df.loc[0, measures["num_one_word_phrases"]] = int(one_word_phrase_counts.sum())
+        summ_df.loc[0, measures["phrase_count_mean"]] = float(phrase_counts.mean())
+
+    return [word_df, turn_df, summ_df]
+
 def filter_speaker(utterances, json_conf, speaker_label, measures):
     """
     ------------------------------------------------------------------------------------------------------
@@ -741,7 +782,7 @@ def process_language_feature(
          which to be processed
     feature_groups: list[str] | set[str] | None
         Optional feature group selector. When provided, only these groups are computed.
-        Supported groups: "pause", "repetition", "coherence", "sentiment", "first_person".
+        Supported groups: "structure", "pause", "repetition", "coherence", "sentiment", "first_person".
     speaker_filter_label: str | None
         Speaker scope for strict filtering of utterances and word-level json payloads.
         When None, language features are computed over the whole interview.
@@ -761,13 +802,14 @@ def process_language_feature(
     json_conf, utterances = transcribe_info
 
     if feature_groups is None:
-        feature_groups = {"pause", "repetition", "coherence", "sentiment", "first_person"}
+        feature_groups = {"structure", "pause", "repetition", "coherence", "sentiment", "first_person"}
     else:
         if isinstance(feature_groups, str):
             feature_groups = {feature_groups}
         feature_groups = {str(f).strip().lower() for f in feature_groups if f}
 
     want_pause = "pause" in feature_groups
+    want_structure = "structure" in feature_groups
     want_repetition = "repetition" in feature_groups
     want_coherence = "coherence" in feature_groups and option == "coherence"
     # first_person relies on sentiment scores (pos/neg)
@@ -792,6 +834,8 @@ def process_language_feature(
         measures,
     )
 
+    if want_structure:
+        df_list = add_phrase_count_features(df_list, utterances_speaker, min_turn_length, measures)
     if want_pause:
         df_list = get_pause_feature(json_conf_speaker, df_list, text_list, turn_indices, measures, time_index, language)
     if want_repetition:

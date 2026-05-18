@@ -300,7 +300,7 @@ def process_transcript(
             can be 'simple' or 'coherence'
     feature_groups: list[str] | set[str] | None
         Optional feature group selector. When provided, only these groups are computed.
-        Supported groups: "pause", "repetition", "coherence", "sentiment", "first_person".
+        Supported groups: "structure", "pause", "repetition", "coherence", "sentiment", "first_person".
     whisper_turn_mode: str
         Whisper turn construction mode:
         "auto" keeps the current behavior, "speaker" groups consecutive segments
@@ -396,7 +396,7 @@ def speech_characteristics(
          can be 'simple' or 'coherence'
     feature_groups: list[str] | set[str] | None
         Optional feature group selector. When provided, only these groups are computed.
-        Supported groups: "pause", "repetition", "coherence", "sentiment", "first_person".
+        Supported groups: "structure", "pause", "repetition", "coherence", "sentiment", "first_person".
     whisper_turn_mode: str
         Whisper turn construction mode.
         Supported values:

@@ -6,11 +6,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from airest.speech.util import characteristics_util as cutil
+from phonova.speech.util import characteristics_util as cutil
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MEASURES_PATH = PROJECT_ROOT / "src" / "airest" / "speech" / "config" / "text.json"
+MEASURES_PATH = PROJECT_ROOT / "phonova" / "speech" / "config" / "text.json"
 
 
 def load_measures() -> dict:

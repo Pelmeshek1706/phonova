@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from airest.speech import speech_attribute
+from phonova.speech import speech_attribute
 from phonova.transcripts import TranscriptPreprocessor
 
 

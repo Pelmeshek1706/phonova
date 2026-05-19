@@ -7,8 +7,8 @@ from typing import Any
 
 import pandas as pd
 
-from airest.speech import speech_attribute as airest_speech
-from airest.speech.util import characteristics_util as airest_cutil
+from phonova.speech import speech_attribute as phonova_speech
+from phonova.speech.util import characteristics_util as phonova_cutil
 
 from .config import normalize_turn_mode
 
@@ -32,17 +32,17 @@ class TranscriptPreprocessor:
 
     def prepare(self, json_conf: Any, whisper_turn_mode: str = "auto") -> PreparedTranscript:
         """Detect transcript origin and return normalized word- and turn-level structures."""
-        if airest_speech.is_whisper_transcribe(json_conf):
+        if phonova_speech.is_whisper_transcribe(json_conf):
             filtered_json, utterances = self._filter_whisper(
                 json_conf,
                 whisper_turn_mode=whisper_turn_mode,
             )
             source = "whisper"
-        elif airest_speech.is_amazon_transcribe(json_conf):
-            filtered_json, utterances = airest_speech.filter_transcribe(json_conf, self.measures)
+        elif phonova_speech.is_amazon_transcribe(json_conf):
+            filtered_json, utterances = phonova_speech.filter_transcribe(json_conf, self.measures)
             source = "aws"
         else:
-            filtered_json, utterances = airest_speech.filter_vosk(json_conf, self.measures)
+            filtered_json, utterances = phonova_speech.filter_vosk(json_conf, self.measures)
             source = "vosk"
 
         return PreparedTranscript(
@@ -50,15 +50,15 @@ class TranscriptPreprocessor:
             raw_json=json_conf,
             filtered_json=filtered_json,
             utterances=utterances,
-            time_columns=airest_speech.get_time_columns(source),
+            time_columns=phonova_speech.get_time_columns(source),
         )
 
     def _filter_whisper(self, json_conf: dict[str, Any], whisper_turn_mode: str) -> tuple[list[dict[str, Any]], pd.DataFrame]:
         """Normalize Whisper-like transcripts with configurable turn aggregation."""
         item_data = json_conf["segments"]
-        item_data = airest_cutil.create_index_column(item_data, self.measures)
+        item_data = phonova_cutil.create_index_column(item_data, self.measures)
         utterances = self._create_turns_whisper(item_data, whisper_turn_mode=whisper_turn_mode)
-        filter_json = airest_cutil.filter_json_transcribe(item_data, self.measures)
+        filter_json = phonova_cutil.filter_json_transcribe(item_data, self.measures)
         return filter_json, utterances
 
     def _create_turns_whisper(self, item_data: list[dict[str, Any]], whisper_turn_mode: str) -> pd.DataFrame:

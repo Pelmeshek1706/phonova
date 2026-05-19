@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from airest.speech import speech_characteristics
+from phonova.speech import speech_characteristics
 from phonova import SpeechAnalyzer, SpeechAnalyzerSettings
 
 

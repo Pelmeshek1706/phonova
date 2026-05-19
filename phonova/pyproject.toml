@@ -18,11 +18,14 @@ dynamic = ["dependencies"]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["phonova*"]
+exclude = ["tests*"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.package-data]
-"airest.speech" = ["config/*.json"]
-"airest.speech.util" = ["data/*.tsv"]
+"phonova.speech" = ["config/*.json"]
+"phonova.speech.util" = ["data/*.tsv"]
+"phonova.speech.util.speech" = ["*.tsv", "*.csv"]

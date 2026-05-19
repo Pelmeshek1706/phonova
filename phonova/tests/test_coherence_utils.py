@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from airest.speech.util.speech import coherence
+from phonova.speech.util.speech import coherence
 
 
 class FakeEncoder:

@@ -31,28 +31,47 @@ logger = logging.getLogger()
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
 
+def _get_env_with_legacy(phonova_name: str, legacy_name: str, default: str) -> str:
+    """Read the new PHONOVA env var and fall back to the legacy AIREST name."""
+    return os.getenv(phonova_name, os.getenv(legacy_name, default))
+
+
 # Select coherence backend: "gemma" (default) or "bert".
-# Override via env AIREST_COHERENCE_BACKEND or by setting COHERENCE_BACKEND at runtime.
-COHERENCE_BACKEND = os.getenv("AIREST_COHERENCE_BACKEND", "gemma").strip().lower()
+# Override via env PHONOVA_COHERENCE_BACKEND or legacy AIREST_COHERENCE_BACKEND.
+COHERENCE_BACKEND = _get_env_with_legacy(
+    "PHONOVA_COHERENCE_BACKEND",
+    "AIREST_COHERENCE_BACKEND",
+    "gemma",
+).strip().lower()
 
 DEFAULT_EMBEDDING_MODEL_ID = "google/embeddinggemma-300m"
 DEFAULT_PPL_MODEL_ID = "google/gemma-3-270m"
-BERT_EN_MODEL_ID = os.getenv("AIREST_BERT_EN_MODEL_ID", "bert-base-cased")
-BERT_MULTI_MODEL_ID = os.getenv("AIREST_BERT_MULTI_MODEL_ID", "bert-base-multilingual-uncased")
+BERT_EN_MODEL_ID = _get_env_with_legacy("PHONOVA_BERT_EN_MODEL_ID", "AIREST_BERT_EN_MODEL_ID", "bert-base-cased")
+BERT_MULTI_MODEL_ID = _get_env_with_legacy(
+    "PHONOVA_BERT_MULTI_MODEL_ID",
+    "AIREST_BERT_MULTI_MODEL_ID",
+    "bert-base-multilingual-uncased",
+)
 BERT_SENTENCE_EN_MODEL_ID = os.getenv(
-    "AIREST_BERT_SENTENCE_EN_MODEL_ID",
+    "PHONOVA_BERT_SENTENCE_EN_MODEL_ID",
+    os.getenv(
+        "AIREST_BERT_SENTENCE_EN_MODEL_ID",
     "sentence-transformers/all-MiniLM-L6-v2",
+    ),
 )
 BERT_SENTENCE_MULTI_MODEL_ID = os.getenv(
-    "AIREST_BERT_SENTENCE_MULTI_MODEL_ID",
+    "PHONOVA_BERT_SENTENCE_MULTI_MODEL_ID",
+    os.getenv(
+        "AIREST_BERT_SENTENCE_MULTI_MODEL_ID",
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    ),
 )
 PPL_MAX_TOKENS = 2048
 EMBEDDING_BATCH_SIZE = 256
 WINDOW_BATCH_SIZE = 512
 MIN_EMBEDDING_BATCH_SIZE = 8
 WORD_STREAM_CHUNK_SIZE = 32
-TOKEN_CACHE_SIZE = int(os.getenv("AIREST_TOKEN_CACHE_SIZE", "512"))
+TOKEN_CACHE_SIZE = int(_get_env_with_legacy("PHONOVA_TOKEN_CACHE_SIZE", "AIREST_TOKEN_CACHE_SIZE", "512"))
 PREVIOUS_SPEAKER_SIMILARITY_MIN_TURN_LENGTH = 1
 _PPL_TOKEN_CACHE: "OrderedDict[str, torch.Tensor]" = OrderedDict()
 _BERT_TOKEN_CACHE: "OrderedDict[str, torch.Tensor]" = OrderedDict()

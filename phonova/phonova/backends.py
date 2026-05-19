@@ -8,7 +8,7 @@ from typing import Any, Optional, Tuple
 
 import numpy as np
 
-from airest.speech.util.speech import coherence as airest_coherence
+from phonova.speech.util.speech import coherence as phonova_coherence
 
 from .config import CoherenceBackendName, SpeechAnalyzerSettings
 
@@ -95,10 +95,10 @@ class BaseCoherenceBackend(ABC):
         """Encode phrase texts through the shared sentence encoder pipeline."""
         if self.sentence_encoder is None or not phrases:
             return np.zeros((0, 0), dtype=np.float32)
-        return airest_coherence._encode_in_chunks(
+        return phonova_coherence._encode_in_chunks(
             self.sentence_encoder,
             phrases,
-            airest_coherence.EMBEDDING_BATCH_SIZE,
+            phonova_coherence.EMBEDDING_BATCH_SIZE,
         )
 
 
@@ -108,7 +108,7 @@ class GemmaCoherenceBackend(BaseCoherenceBackend):
     backend_name: CoherenceBackendName = "gemma"
 
     def _load_resources(self) -> CoherenceResources:
-        bundle = airest_coherence.get_model_bundle(
+        bundle = phonova_coherence.get_model_bundle(
             self.settings.language,
             device_hint=self.settings.device_hint,
         )
@@ -120,10 +120,10 @@ class GemmaCoherenceBackend(BaseCoherenceBackend):
         )
 
     def _embed_words(self, words: list[str]) -> np.ndarray:
-        return airest_coherence.get_word_embeddings(words, self.sentence_encoder)
+        return phonova_coherence.get_word_embeddings(words, self.sentence_encoder)
 
     def calculate_perplexity(self, text: str) -> Tuple[float, float, float, float]:
-        return airest_coherence.calculate_perplexity(
+        return phonova_coherence.calculate_perplexity(
             text,
             self.language_model,
             self.tokenizer,
@@ -137,7 +137,7 @@ class BertCoherenceBackend(BaseCoherenceBackend):
     backend_name: CoherenceBackendName = "bert"
 
     def _load_resources(self) -> CoherenceResources:
-        bundle = airest_coherence.get_bert_bundle(
+        bundle = phonova_coherence.get_bert_bundle(
             self.settings.language,
             self.measures,
             device_hint=self.settings.device_hint,
@@ -150,10 +150,10 @@ class BertCoherenceBackend(BaseCoherenceBackend):
         )
 
     def _embed_words(self, words: list[str]) -> np.ndarray:
-        return airest_coherence.get_word_embeddings_bert(words, self.tokenizer, self.word_model)
+        return phonova_coherence.get_word_embeddings_bert(words, self.tokenizer, self.word_model)
 
     def calculate_perplexity(self, text: str) -> Tuple[float, float, float, float]:
-        return airest_coherence.calculate_perplexity_bert(
+        return phonova_coherence.calculate_perplexity_bert(
             text,
             self.language_model,
             self.tokenizer,

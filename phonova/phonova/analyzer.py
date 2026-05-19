@@ -8,9 +8,9 @@ from typing import Iterable
 
 import numpy as np
 
-from airest.speech import speech_attribute as airest_speech
-from airest.speech.util import characteristics_util as airest_cutil
-from airest.speech.util.speech.coherence import (
+from phonova.speech import speech_attribute as phonova_speech
+from phonova.speech.util import characteristics_util as phonova_cutil
+from phonova.speech.util.speech.coherence import (
     WORD_STREAM_CHUNK_SIZE,
     PREVIOUS_SPEAKER_SIMILARITY_MIN_TURN_LENGTH,
     _new_coherence_lists,
@@ -25,8 +25,8 @@ from airest.speech.util.speech.coherence import (
     calculate_slope,
     get_word_coherence_summary,
 )
-from airest.speech.util.speech.lexical import get_pos_tag, get_repetitions, get_sentiment
-from airest.speech.util.speech.pause import get_pause_feature
+from phonova.speech.util.speech.lexical import get_pos_tag, get_repetitions, get_sentiment
+from phonova.speech.util.speech.pause import get_pause_feature
 
 from .backends import BaseCoherenceBackend, build_coherence_backend
 from .config import SpeechAnalyzerSettings
@@ -342,7 +342,7 @@ class SpeechAnalyzer:
             coherence_backend=coherence_backend,
             device_hint=device_hint,
         )
-        self.measures = airest_speech.get_config(os.path.abspath(airest_speech.__file__), "text.json")
+        self.measures = phonova_speech.get_config(os.path.abspath(phonova_speech.__file__), "text.json")
         self._prepare_language_resources()
         self.preprocessor = TranscriptPreprocessor(self.measures)
         self.backend = build_coherence_backend(self.settings, self.measures)
@@ -359,7 +359,7 @@ class SpeechAnalyzer:
         whisper_turn_mode: str = "auto",
     ) -> list:
         """Analyze one transcript while reusing the instance language and backend configuration."""
-        df_list = list(airest_cutil.create_empty_dataframes(self.measures))
+        df_list = list(phonova_cutil.create_empty_dataframes(self.measures))
 
         try:
             if option not in {"simple", "coherence"}:
@@ -367,7 +367,7 @@ class SpeechAnalyzer:
 
             if bool(json_conf):
                 prepared = self.preprocessor.prepare(json_conf, whisper_turn_mode=whisper_turn_mode)
-                airest_speech.common_summary_feature(df_list[2], json_conf, prepared.source, speaker_label)
+                phonova_speech.common_summary_feature(df_list[2], json_conf, prepared.source, speaker_label)
 
                 if len(prepared.filtered_json) > 0 and len(prepared.utterances) > 0:
                     df_list = self._process_language_features(
@@ -393,9 +393,9 @@ class SpeechAnalyzer:
     def _prepare_language_resources(self) -> None:
         """Load NLP resources once for the configured analyzer language."""
         if self.settings.language in self.measures["english_langs"]:
-            airest_cutil.download_nltk_resources()
+            phonova_cutil.download_nltk_resources()
         if self.settings.language in {"ua", "uk"}:
-            airest_cutil.download_ua_resources()
+            phonova_cutil.download_ua_resources()
 
     def _process_language_features(
         self,
@@ -421,19 +421,19 @@ class SpeechAnalyzer:
         if want_coherence:
             self._ensure_requested_coherence_backend_available()
 
-        utterances_speaker, json_conf_speaker = airest_cutil.filter_speaker(
+        utterances_speaker, json_conf_speaker = phonova_cutil.filter_speaker(
             prepared.utterances,
             prepared.filtered_json,
             speaker_filter_label,
             self.measures,
         )
-        text_list, turn_indices = airest_cutil.create_text_list(
+        text_list, turn_indices = phonova_cutil.create_text_list(
             utterances_speaker,
             speaker_label,
             min_turn_length,
             self.measures,
         )
-        utterances_dialogue_filtered, utterances_speaker_filtered = airest_cutil.filter_length(
+        utterances_dialogue_filtered, utterances_speaker_filtered = phonova_cutil.filter_length(
             prepared.utterances,
             utterances_speaker,
             speaker_filter_label,
@@ -442,7 +442,7 @@ class SpeechAnalyzer:
         )
 
         if want_structure:
-            df_list = airest_cutil.add_phrase_count_features(
+            df_list = phonova_cutil.add_phrase_count_features(
                 df_list,
                 utterances_speaker,
                 min_turn_length,
@@ -471,7 +471,7 @@ class SpeechAnalyzer:
             )
         if self.settings.language in self.measures["english_langs"] or self.settings.language in {"ua", "uk"}:
             if want_sentiment:
-                vader_distribution_texts = airest_cutil.extract_segment_texts_for_speaker(
+                vader_distribution_texts = phonova_cutil.extract_segment_texts_for_speaker(
                     prepared.raw_json,
                     speaker_filter_label,
                     prepared.source,

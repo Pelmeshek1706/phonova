@@ -13,7 +13,7 @@ Checked on 2026-05-19. This note records the citation and license/access status 
 | Universal Dependencies Ukrainian ParlaMint | `track_a_validate_pos_tense.py` | Repository license is CC BY-SA 4.0. The script reads raw GitHub train/dev/test CoNLL-U URLs or caller-provided local copies. No CoNLL-U files are committed here. | Cite UD_Ukrainian-ParlaMint, Kopp et al. (2023), and Erjavec et al. (2022). Preserve CC BY-SA attribution if derived tables quote or redistribute corpus content. |
 | Praat Vocal Toolkit Syllable Nuclei v3 | `track_a_validate_syllables.py` | Public Praat plugin page says the scripts are included with author consent and gives the validation paper. This repository does not vendor `SyllableNucleiv3.praat`; users pass it with `--praat-script`. | De Jong, Pacilly, and Heeren (2021). |
 | VADER / vaderSentiment | VADER sentiment features and `track_a_evaluate_sentiment.py` | `vaderSentiment` documentation states that VADER is open sourced under the MIT License. VADER is installed as a dependency, not vendored in this paper folder. | Hutto and Gilbert (2014). |
-| Restricted syllable/SPM audio archive | `track_a_validate_syllables.py` | The notebook used an archive unpacking to `labels.jsonl` and `toronto_*/*.wav`. No public landing page or license is included in this repository. Treat it as restricted until the manuscript data steward supplies the formal citation and sharing terms. | Pending steward confirmation. Do not cite as public, and do not redistribute files or derived row-level outputs. |
+| UCU Audio Processing Course 2025 / Telebachennia Toronto clip dataset | `track_a_validate_syllables.py` | Public GitHub course repository with a README citation. The notebook used a local course-derived archive unpacking to `labels.jsonl` and `toronto_*/*.wav`. This paper folder does not vendor raw clips or transcripts. No explicit repository license file was visible when checked, so users should follow the repository instructions, any dataset-hosting terms, and original media-source terms. | Sydorskyi et al. (2025), UCU Audio Processing Course 2025. |
 
 ## Source Notes
 
@@ -23,6 +23,7 @@ Checked on 2026-05-19. This note records the citation and license/access status 
 - CardiffNLP XLM-T sentiment model card: `https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment`
 - UD Ukrainian ParlaMint repository: `https://github.com/UniversalDependencies/UD_Ukrainian-ParlaMint`
 - UD Ukrainian ParlaMint license file: `https://raw.githubusercontent.com/UniversalDependencies/UD_Ukrainian-ParlaMint/master/LICENSE.txt`
+- UCU Audio Processing Course repository: `https://github.com/VSydorskyy/ucu_audio_processing_course`
 - Praat Vocal Toolkit Syllable Nuclei v3 page: `https://www.praatvocaltoolkit.com/syllable-nuclei-v3.html`
 - VADER documentation: `https://vadersentiment.readthedocs.io/en/latest/pages/introduction.html`
 
@@ -36,3 +37,17 @@ Checked on 2026-05-19. This note records the citation and license/access status 
 - Hutto, C. J., and Eric Gilbert. 2014. "VADER: A Parsimonious Rule-Based Model for Sentiment Analysis of Social Media Text." Proceedings of the International AAAI Conference on Web and Social Media 8(1):216-225. `https://doi.org/10.1609/icwsm.v8i1.14550`
 - Kopp, Matyas, Anna Kryvenko, and Andriana Rii. 2023. "Ukrainian parliamentary corpus ParlaMint-UA 4.0.1." Slovenian language resource repository CLARIN.SI. `http://hdl.handle.net/11356/1900`
 - Ringeval, Fabien, Björn Schuller, Michel Valstar, Nicholas Cummins, Roddy Cowie, Leili Tavabi, Maximilian Schmitt, et al. 2019. "AVEC 2019 Workshop and Challenge: State-of-Mind, Detecting Depression with AI, and Cross-Cultural Affect Recognition." In Proceedings of the 9th International on Audio/Visual Emotion Challenge and Workshop, 3-12. ACM.
+- Sydorskyi, Volodymyr, Anton Bazdyrev, Oles Dobosevych, Yurii Laba, Andrii Shevtsov, Ostap Viniavskyi, Yurii Yelisieiev, Yurii Paniv, Andrii Zhuravlov, and Yevhenii Azarov. 2025. "UCU Audio Processing Course 2025." GitHub repository. `https://github.com/VSydorskyy/ucu_audio_processing_course`
+
+## BibTeX For Telebachennia Toronto Clip Dataset Source
+
+```bibtex
+@misc{ucu_audio_processing_course_2025,
+  author = {Volodymyr Sydorskyi, Anton Bazdyrev, Oles Dobosevych, Yurii Laba, Andrii Shevtsov, Ostap Viniavskyi, Yurii Yelisieiev, Yurii Paniv, Andrii Zhuravlov, Yevhenii Azarov},
+  title = {UCU Audio Processing Course 2025},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/VSydorskyy/ucu_audio_processing_course}},
+}
+```

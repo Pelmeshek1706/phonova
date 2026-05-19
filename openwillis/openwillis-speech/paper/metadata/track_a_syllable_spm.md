@@ -4,14 +4,32 @@ Script: `paper/scripts/track_a_validate_syllables.py`
 
 ## Where To Get Inputs
 
-The syllable/SPM validation audio and transcript package is not public in this repository. The notebook used an archived project package that unpacked into:
+The syllable/SPM validation audio and transcript package comes from the public
+UCU Audio Processing Course repository:
+
+- `https://github.com/VSydorskyy/ucu_audio_processing_course`
+
+The course repository README provides the citation below. The notebook used a
+local course-derived package that unpacked into:
 
 - `labels.jsonl`
 - `toronto_*/*.wav`
 
-Because the archive contains speech recordings and transcripts, it should be obtained from the manuscript data steward or corresponding author under the approved sharing terms. It is separate from E-DAIC Track B data.
-The public release should not describe this archive as openly available unless
-the steward supplies a public landing page or license.
+The raw audio clips and transcripts are not vendored in this paper folder. Users
+should obtain them through the course repository or its referenced dataset
+distribution route and follow the repository, dataset-hosting, and original
+media-source terms.
+
+```bibtex
+@misc{ucu_audio_processing_course_2025,
+  author = {Volodymyr Sydorskyi, Anton Bazdyrev, Oles Dobosevych, Yurii Laba, Andrii Shevtsov, Ostap Viniavskyi, Yurii Yelisieiev, Yurii Paniv, Andrii Zhuravlov, Yevhenii Azarov},
+  title = {UCU Audio Processing Course 2025},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/VSydorskyy/ucu_audio_processing_course}},
+}
+```
 
 The Praat reference script is public and must be supplied locally as `--praat-script`:
 

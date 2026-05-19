@@ -1,0 +1,4 @@
+source,strict_leakage_pct_words,broad_leakage_pct_words,strict_leakage_pct_duration,broad_leakage_pct_duration,overlap_pct
+original_edaic_proxy,9.743,15.586,5.011,9.242,9.222
+raw_whisper_participant_speaker,10.737,12.107,9.587,10.857,9.032
+fixed_diarization_participant_only,2.099,3.5,2.058,3.433,0.0

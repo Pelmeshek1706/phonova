@@ -1,0 +1,4 @@
+dataset,spacy_upos_macro_f1,stanza_upos_macro_f1,delta_f1_stanza_minus_spacy_pct
+dev,0.972,0.975,0.285
+test,0.973,0.972,-0.112
+train,0.974,0.974,0.071

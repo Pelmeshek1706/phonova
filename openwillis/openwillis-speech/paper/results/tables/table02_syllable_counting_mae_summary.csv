@@ -1,0 +1,7 @@
+method_pair,mae,overall_icc_2_1
+spaCy-uk vs Pyphen,0.517,0.656
+spaCy-uk vs NLTK,3.776,0.656
+Praat-like vs Praat v3,2.423,0.656
+spaCy-uk vs Praat v3,9.778,0.656
+Pyphen vs Praat v3,9.836,0.656
+NLTK vs Praat v3,6.68,0.656

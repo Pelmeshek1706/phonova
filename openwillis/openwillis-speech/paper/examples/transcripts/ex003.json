@@ -1,0 +1,54 @@
+{
+  "Participant": "ex003",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 0.9,
+      "speaker": "interviewer",
+      "role": "interviewer",
+      "text": "What happens at night?",
+      "source_text_en": "What happens at night?",
+      "words": [
+        {"word": "What", "start": 0.0, "end": 0.2},
+        {"word": "happens", "start": 0.2, "end": 0.5},
+        {"word": "at", "start": 0.5, "end": 0.6},
+        {"word": "night", "start": 0.6, "end": 0.9}
+      ]
+    },
+    {
+      "id": 1,
+      "start": 1.3,
+      "end": 3.2,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I wake suddenly and listen for sounds.",
+      "source_text_en": "I wake suddenly and listen for sounds.",
+      "words": [
+        {"word": "I", "start": 1.3, "end": 1.4},
+        {"word": "wake", "start": 1.4, "end": 1.7},
+        {"word": "suddenly", "start": 1.7, "end": 2.1},
+        {"word": "and", "start": 2.1, "end": 2.2},
+        {"word": "listen", "start": 2.2, "end": 2.6},
+        {"word": "for", "start": 2.6, "end": 2.8},
+        {"word": "sounds", "start": 2.8, "end": 3.2}
+      ]
+    },
+    {
+      "id": 2,
+      "start": 3.9,
+      "end": 5.6,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "My body relaxes after sunrise.",
+      "source_text_en": "My body relaxes after sunrise.",
+      "words": [
+        {"word": "My", "start": 3.9, "end": 4.0},
+        {"word": "body", "start": 4.0, "end": 4.3},
+        {"word": "relaxes", "start": 4.3, "end": 4.8},
+        {"word": "after", "start": 4.8, "end": 5.1},
+        {"word": "sunrise", "start": 5.1, "end": 5.6}
+      ]
+    }
+  ]
+}

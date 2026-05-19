@@ -1,0 +1,7 @@
+Participant,Depression_label,PTSD_label,Depression_severity,PTSD_severity,split
+ex001,0,0,1,0,train
+ex002,1,0,4,1,train
+ex003,0,1,0,4,dev
+ex004,1,1,5,5,dev
+ex005,0,0,1,1,test
+ex006,1,1,4,4,test

@@ -1,0 +1,56 @@
+{
+  "Participant": "ex002",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 0.8,
+      "speaker": "interviewer",
+      "role": "interviewer",
+      "text": "Tell me about your days.",
+      "source_text_en": "Tell me about your days.",
+      "words": [
+        {"word": "Tell", "start": 0.0, "end": 0.1},
+        {"word": "me", "start": 0.1, "end": 0.2},
+        {"word": "about", "start": 0.2, "end": 0.4},
+        {"word": "your", "start": 0.4, "end": 0.5},
+        {"word": "days", "start": 0.5, "end": 0.8}
+      ]
+    },
+    {
+      "id": 1,
+      "start": 1.0,
+      "end": 2.8,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I feel tired most mornings.",
+      "source_text_en": "I feel tired most mornings.",
+      "words": [
+        {"word": "I", "start": 1.0, "end": 1.1},
+        {"word": "feel", "start": 1.1, "end": 1.4},
+        {"word": "tired", "start": 1.4, "end": 1.8},
+        {"word": "most", "start": 1.8, "end": 2.1},
+        {"word": "mornings", "start": 2.1, "end": 2.8}
+      ]
+    },
+    {
+      "id": 2,
+      "start": 3.5,
+      "end": 5.0,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I stay inside and repeat the same routine.",
+      "source_text_en": "I stay inside and repeat the same routine.",
+      "words": [
+        {"word": "I", "start": 3.5, "end": 3.6},
+        {"word": "stay", "start": 3.6, "end": 3.9},
+        {"word": "inside", "start": 3.9, "end": 4.2},
+        {"word": "and", "start": 4.2, "end": 4.3},
+        {"word": "repeat", "start": 4.3, "end": 4.6},
+        {"word": "the", "start": 4.6, "end": 4.7},
+        {"word": "same", "start": 4.7, "end": 4.8},
+        {"word": "routine", "start": 4.8, "end": 5.0}
+      ]
+    }
+  ]
+}

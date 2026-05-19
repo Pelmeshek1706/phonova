@@ -1,0 +1,52 @@
+{
+  "Participant": "ex006",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 0.9,
+      "speaker": "interviewer",
+      "role": "interviewer",
+      "text": "What feels difficult?",
+      "source_text_en": "What feels difficult?",
+      "words": [
+        {"word": "What", "start": 0.0, "end": 0.2},
+        {"word": "feels", "start": 0.2, "end": 0.5},
+        {"word": "difficult", "start": 0.5, "end": 0.9}
+      ]
+    },
+    {
+      "id": 1,
+      "start": 1.5,
+      "end": 3.4,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I feel heavy and quiet.",
+      "source_text_en": "I feel heavy and quiet.",
+      "words": [
+        {"word": "I", "start": 1.5, "end": 1.6},
+        {"word": "feel", "start": 1.6, "end": 1.9},
+        {"word": "heavy", "start": 1.9, "end": 2.3},
+        {"word": "and", "start": 2.3, "end": 2.4},
+        {"word": "quiet", "start": 2.4, "end": 3.4}
+      ]
+    },
+    {
+      "id": 2,
+      "start": 4.2,
+      "end": 6.2,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I avoid sleep because dreams return.",
+      "source_text_en": "I avoid sleep because dreams return.",
+      "words": [
+        {"word": "I", "start": 4.2, "end": 4.3},
+        {"word": "avoid", "start": 4.3, "end": 4.6},
+        {"word": "sleep", "start": 4.6, "end": 5.0},
+        {"word": "because", "start": 5.0, "end": 5.3},
+        {"word": "dreams", "start": 5.3, "end": 5.7},
+        {"word": "return", "start": 5.7, "end": 6.2}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+# Optional Track A validation dependencies for:
+# - paper/scripts/track_a_validate_syllables.py
+# - paper/scripts/track_a_validate_pos_tense.py
+# - paper/scripts/track_a_evaluate_sentiment.py
+#
+# Some model assets are installed separately, for example:
+#   python -m spacy download uk_core_news_md
+#   python -m spacy download uk_core_news_sm
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.5
+tqdm>=4.66
+pyphen>=0.15
+nltk>=3.8
+spacy>=3.8
+stanza>=1.10
+conllu>=6.0
+requests>=2.31
+pingouin>=0.5
+praat-parselmouth>=0.4
+datasets>=2.19
+transformers>=4.40
+huggingface-hub>=0.23
+safetensors>=0.4
+torch>=2.2
+vaderSentiment>=3.3

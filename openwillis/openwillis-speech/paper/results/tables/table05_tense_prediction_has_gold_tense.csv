@@ -1,0 +1,4 @@
+dataset,spacy_tense_macro_f1,stanza_tense_macro_f1,delta_f1_stanza_minus_spacy_pct
+dev,0.981,0.706,-27.46
+test,0.729,0.708,-2.09
+train,0.731,0.719,-1.27

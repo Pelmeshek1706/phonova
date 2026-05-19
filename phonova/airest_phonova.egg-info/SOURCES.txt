@@ -29,7 +29,6 @@ phonova/speech/util/speech/pause.py
 phonova/speech/util/speech/thresholds.py
 phonova/speech/util/speech/ukrainian_vader.py
 tests/test_coherence_utils.py
-tests/test_no_openwillis_refs.py
 tests/test_package_imports.py
 tests/test_schema.py
 tests/test_speech_analyzer_smoke.py

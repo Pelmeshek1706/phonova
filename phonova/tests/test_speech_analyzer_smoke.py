@@ -36,7 +36,7 @@ def build_whisper_payload() -> dict:
     }
 
 
-def test_speech_analyzer_runs_simple_feature_flow_without_openwillis_dependency(monkeypatch) -> None:
+def test_speech_analyzer_runs_simple_feature_flow_without_phonova_dependency(monkeypatch) -> None:
     monkeypatch.setattr(SpeechAnalyzer, "_prepare_language_resources", lambda self: None)
     monkeypatch.setattr(
         analyzer_module,

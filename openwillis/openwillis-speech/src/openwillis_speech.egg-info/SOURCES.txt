@@ -21,3 +21,8 @@ src/openwillis_speech.egg-info/dependency_links.txt
 src/openwillis_speech.egg-info/not-zip-safe
 src/openwillis_speech.egg-info/requires.txt
 src/openwillis_speech.egg-info/top_level.txt
+src/phonova/__init__.py
+src/phonova/analyzer.py
+src/phonova/backends.py
+src/phonova/config.py
+src/phonova/transcripts.py

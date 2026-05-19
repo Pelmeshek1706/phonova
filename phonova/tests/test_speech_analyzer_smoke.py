@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 import phonova.analyzer as analyzer_module
 from phonova import SpeechAnalyzer
@@ -58,3 +59,23 @@ def test_speech_analyzer_runs_simple_feature_flow_without_openwillis_dependency(
     assert isinstance(summary, pd.DataFrame)
     assert not turns.empty
     assert not summary.empty
+
+
+def test_speech_analyzer_raises_when_coherence_backend_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(SpeechAnalyzer, "_prepare_language_resources", lambda self: None)
+    monkeypatch.setattr(
+        analyzer_module,
+        "build_coherence_backend",
+        lambda settings, measures: DummyBackend(settings),
+    )
+
+    analyzer = SpeechAnalyzer(language="ua", coherence_backend="gemma")
+    with pytest.raises(RuntimeError, match="would otherwise return NaN coherence metrics"):
+        analyzer.analyze_transcript(
+            json_conf=build_whisper_payload(),
+            option="coherence",
+            feature_groups=["coherence"],
+            speaker_label="participant",
+            min_turn_length=1,
+            whisper_turn_mode="speaker",
+        )

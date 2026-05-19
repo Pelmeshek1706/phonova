@@ -35,6 +35,10 @@ from .transcripts import PreparedTranscript, TranscriptPreprocessor
 logger = logging.getLogger(__name__)
 
 
+class UnavailableCoherenceBackendError(RuntimeError):
+    """Raised when a requested coherence backend has no usable runtime resources."""
+
+
 class CoherenceAnalyzer:
     """Apply coherence metrics using one preloaded backend instance."""
 
@@ -376,6 +380,8 @@ class SpeechAnalyzer:
                         feature_groups=feature_groups,
                     )
         except Exception as exc:
+            if isinstance(exc, UnavailableCoherenceBackendError):
+                raise
             logger.info("Error in SpeechAnalyzer.analyze_transcript: %s", exc)
 
         return self._finalize_output(df_list)
@@ -411,6 +417,9 @@ class SpeechAnalyzer:
         want_first_person = "first_person" in groups
         speaker_filter_label = speaker_label
         coherence_speaker_label = speaker_label
+
+        if want_coherence:
+            self._ensure_requested_coherence_backend_available()
 
         utterances_speaker, json_conf_speaker = legacy_cutil.filter_speaker(
             prepared.utterances,
@@ -479,6 +488,24 @@ class SpeechAnalyzer:
                 df_list = get_pos_tag(df_list, text_list, self.measures, lang=self.settings.language)
 
         return df_list
+
+    def _ensure_requested_coherence_backend_available(self) -> None:
+        """Fail loudly when a requested coherence backend initialized without usable resources."""
+        if self.backend.supports_word_coherence() or self.backend.supports_phrase_coherence():
+            return
+
+        message = (
+            f"Coherence backend '{self.settings.coherence_backend}' is unavailable for "
+            f"language '{self.settings.language}'. The analyzer would otherwise return NaN "
+            "coherence metrics."
+        )
+        if self.settings.coherence_backend == "gemma":
+            message += (
+                " Gemma model resources failed to load. Check the earlier "
+                "'Failed to load sentence encoder' / 'Failed to load Gemma LM' warnings and "
+                "use a compatible transformers + sentence-transformers environment."
+            )
+        raise UnavailableCoherenceBackendError(message)
 
     def _normalize_feature_groups(self, feature_groups: Iterable[str] | str | None) -> set[str]:
         """Normalize the optional feature group selector to the legacy set-based format."""

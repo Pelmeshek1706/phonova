@@ -1,0 +1,17 @@
+{
+  "feature_groups": [
+    "structure",
+    "pause",
+    "repetition"
+  ],
+  "input": "paper/examples/transcripts",
+  "language": "en",
+  "manifest_csv": "paper/examples/expected_outputs/manifest.csv",
+  "n_files": 6,
+  "option": "simple",
+  "pattern": "*.json",
+  "speaker_label": "participant",
+  "summary_features_csv": "paper/examples/expected_outputs/summary_features.csv",
+  "summary_sha256": "c1445254e2f063e21cb7c466cca78ad1808a6b54c3f2fd235c1d73776da147f7",
+  "whisper_turn_mode": "auto"
+}

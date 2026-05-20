@@ -1,0 +1,12 @@
+Participant,source_file,pre_word_pause,num_syllables,part_of_speech,first_person,verb_tense,word_coherence,word_coherence_5,word_coherence_10,word_coherence_variability_2,word_coherence_variability_3,word_coherence_variability_4,word_coherence_variability_5,word_coherence_variability_6,word_coherence_variability_7,word_coherence_variability_8,word_coherence_variability_9,word_coherence_variability_10
+ex006,ex006.json,,1,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,1,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,2,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,1,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,2,,,,,,,,,,,,,,,
+ex006,ex006.json,0.8000000000000003,1,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,2,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,1,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,3,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,1,,,,,,,,,,,,,,,
+ex006,ex006.json,0.0,2,,,,,,,,,,,,,,,

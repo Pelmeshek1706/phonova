@@ -1,0 +1,7 @@
+# Optional ASR dependencies for paper/scripts/asr_whisperx.py.
+# System dependency: ffmpeg must be available on PATH.
+whisperx==3.8.1
+torchmetrics==1.6.1
+lightning>=2.4,<2.6
+pyannote.audio>=4.0.4,<4.1
+huggingface-hub==0.36.0

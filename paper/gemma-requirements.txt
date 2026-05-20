@@ -1,0 +1,7 @@
+# Optional local Gemma dependencies for leakage cleanup and translation scripts.
+# Paper environment: Transformers 4.56.2, Tokenizers 0.22.1, SentencePiece 0.2.0, PyTorch 2.8.0.
+transformers==4.56.2
+tokenizers==0.22.1
+sentencepiece==0.2.0
+accelerate>=1.0
+torch==2.8.0

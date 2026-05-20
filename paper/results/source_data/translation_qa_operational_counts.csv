@@ -1,0 +1,10 @@
+metric,count,pct
+Translated segments,44309,100.0
+High confidence,38982,87.97761177187479
+Medium confidence,4383,9.891895551693787
+Low confidence,944,2.130492676431425
+Needs review,1636,3.6922521383917486
+Interviews with >=1 review-needed segment,266,96.72727272727272
+QA flag: informal_address,106,0.2392290505314947
+QA flag: unchanged_from_source,25,0.0564219458800695
+QA flag: too_much_latin_text,13,0.0293394118576361

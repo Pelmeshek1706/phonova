@@ -1,0 +1,22 @@
+file,paper_table,description,rows,columns,data_type,contains_participant_rows
+paper/results/tables/table01_feature_family_provenance.csv,Table 1,Feature family provenance summary,6,4,manuscript aggregate,False
+paper/results/tables/table02_syllable_counting_mae_summary.csv,Table 2,Syllable-counting MAE summary,6,3,manuscript aggregate,False
+paper/results/tables/table03_pos_tagging_upos_macro_f1.csv,Table 3,UPOS tagging macro-F1,3,4,manuscript aggregate,False
+paper/results/tables/table04_tense_prediction_verb_only.csv,Table 4,Verb-only tense prediction,3,4,manuscript aggregate,False
+paper/results/tables/table05_tense_prediction_has_gold_tense.csv,Table 5,Gold-tense subset tense prediction,3,4,manuscript aggregate,False
+paper/results/tables/table06_learned_sentiment_model_comparison.csv,Table 6,Learned sentiment model comparison,3,4,manuscript aggregate,False
+paper/results/tables/table07_heuristic_contamination_screen_summary.csv,Table 7,Contamination-screen summary,3,6,aggregate source,False
+paper/results/tables/table08_adjudicated_random_turn_review_summary.csv,Table 8,Random turn-review summary,13,2,aggregate source,False
+paper/results/tables/table09_translation_quality_direct_qa_summary.csv,Table 9,Translation-quality direct QA summary,3,2,aggregate source,False
+paper/results/tables/table10_reference_en_frozen_ua_performance_ci.csv,Table 10,Reference English and frozen Ukrainian performance with CIs,8,11,aggregate source,False
+paper/results/tables/table11_nested_feature_groups.csv,Table 11,Nested feature groups,3,5,aggregate source,False
+paper/results/tables/table12_representative_en_ua_feature_comparisons.csv,Table 12,Representative EN-UA feature comparisons,10,7,feature-level aggregate,False
+paper/results/tables/table13_signal_retention_nested_tiers.csv,Table 13,Signal retention across nested tiers,6,11,aggregate source,False
+paper/results/tables/table14_sentiment_ablation_summary.csv,Table 14,Sentiment-ablation summary,2,11,aggregate source,False
+paper/results/tables/table15_full_train_dev_feature_consistency_audit.csv,Table 15,Full train/dev feature-consistency audit for paper 82 features,82,6,feature-level aggregate,False
+paper/results/tables/table16_oof_selection_audit_summary.csv,Table 16,OOF selection audit summary,2,12,aggregate source,False
+paper/results/tables/table17_best_heldout_english_by_model_family.csv,Table 17,Best held-out English result by model family,20,12,aggregate source,False
+paper/results/tables/table18_broader_fixed_family_ablations_depression.csv,Table 18,Broader fixed-family ablations for depression,20,25,aggregate source,False
+paper/results/tables/table19_broader_fixed_family_ablations_ptsd.csv,Table 19,Broader fixed-family ablations for PTSD,20,25,aggregate source,False
+paper/results/tables/table20_frozen_transfer_sensitivity_proxy_structure.csv,Table 20,Frozen EN-UA transfer sensitivity after excluding proxy/structure variables,6,10,aggregate source,False
+paper/results/tables/table21_transcript_condition_lexical_probe.csv,Table 21,Auxiliary transcript-condition lexical probe,6,10,aggregate source,False

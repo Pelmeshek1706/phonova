@@ -1,0 +1,50 @@
+{
+  "Participant": "ex005",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 0.8,
+      "speaker": "interviewer",
+      "role": "interviewer",
+      "text": "What helped this month?",
+      "source_text_en": "What helped this month?",
+      "words": [
+        {"word": "What", "start": 0.0, "end": 0.2},
+        {"word": "helped", "start": 0.2, "end": 0.5},
+        {"word": "this", "start": 0.5, "end": 0.6},
+        {"word": "month", "start": 0.6, "end": 0.8}
+      ]
+    },
+    {
+      "id": 1,
+      "start": 1.1,
+      "end": 2.7,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I met friends twice.",
+      "source_text_en": "I met friends twice.",
+      "words": [
+        {"word": "I", "start": 1.1, "end": 1.2},
+        {"word": "met", "start": 1.2, "end": 1.5},
+        {"word": "friends", "start": 1.5, "end": 2.0},
+        {"word": "twice", "start": 2.0, "end": 2.7}
+      ]
+    },
+    {
+      "id": 2,
+      "start": 3.0,
+      "end": 4.6,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "My sleep improved slowly.",
+      "source_text_en": "My sleep improved slowly.",
+      "words": [
+        {"word": "My", "start": 3.0, "end": 3.1},
+        {"word": "sleep", "start": 3.1, "end": 3.5},
+        {"word": "improved", "start": 3.5, "end": 4.0},
+        {"word": "slowly", "start": 4.0, "end": 4.6}
+      ]
+    }
+  ]
+}

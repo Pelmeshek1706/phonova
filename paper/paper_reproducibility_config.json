@@ -1,0 +1,173 @@
+{
+  "schema_version": "2026-05-18",
+  "seed": 42,
+  "n_splits": 5,
+  "threshold_metric": "f1_macro",
+  "targets": [
+    "Depression_label",
+    "PTSD_label"
+  ],
+  "metadata_columns": [
+    "Participant",
+    "split",
+    "Depression_label",
+    "PTSD_label",
+    "Depression_severity",
+    "PTSD_severity"
+  ],
+  "feature_sets": {
+    "paper_82": [
+      "speech_length_minutes",
+      "speech_length_words",
+      "words_per_min",
+      "syllables_per_min",
+      "mean_pre_word_pause",
+      "mean_pause_variability",
+      "speech_percentage",
+      "sentiment_pos",
+      "sentiment_neg",
+      "sentiment_neu",
+      "sentiment_overall",
+      "sentiment_vader_pos",
+      "sentiment_vader_neg",
+      "sentiment_vader_neu",
+      "sentiment_vader_overall",
+      "mattr_5",
+      "mattr_10",
+      "mattr_25",
+      "mattr_50",
+      "mattr_100",
+      "first_person_percentage",
+      "prop_verb_past",
+      "prop_function_words",
+      "first_person_sentiment_positive",
+      "first_person_sentiment_negative",
+      "first_person_sentiment_overall",
+      "word_repeat_percentage",
+      "phrase_repeat_percentage",
+      "word_coherence_mean",
+      "num_turns",
+      "num_phrases",
+      "num_one_word_phrases",
+      "num_one_word_turns",
+      "mean_turn_length_minutes",
+      "mean_turn_length_words",
+      "mean_phrases_per_turn",
+      "mean_pre_turn_pause",
+      "speaker_percentage",
+      "first_order_sentence_tangeniality_mean",
+      "first_order_sentence_tangeniality_var",
+      "second_order_sentence_tangeniality_mean",
+      "second_order_sentence_tangeniality_var",
+      "turn_to_turn_tangeniality_mean",
+      "turn_to_turn_tangeniality_var",
+      "turn_to_turn_tangeniality_slope",
+      "semantic_perplexity_mean",
+      "semantic_perplexity_var",
+      "num_interrupts",
+      "first_person_sentiment_positive_vader",
+      "first_person_sentiment_negative_vader",
+      "first_person_sentiment_overall_vader",
+      "turn_to_previous_speaker_turn_similarity_mean",
+      "turn_to_previous_speaker_turn_similarity_var",
+      "turn_to_previous_speaker_turn_similarity_slope",
+      "vader_hist_bin_01",
+      "vader_hist_bin_02",
+      "vader_hist_bin_03",
+      "vader_hist_bin_04",
+      "vader_hist_bin_05",
+      "vader_hist_bin_06",
+      "vader_hist_bin_07",
+      "vader_hist_bin_08",
+      "vader_hist_bin_09",
+      "vader_hist_bin_10",
+      "vader_hist_bin_11",
+      "vader_hist_bin_12",
+      "vader_hist_bin_13",
+      "vader_hist_bin_14",
+      "vader_hist_bin_15",
+      "vader_hist_bin_16",
+      "vader_hist_bin_17",
+      "vader_hist_bin_18",
+      "vader_hist_bin_19",
+      "vader_hist_bin_20",
+      "vader_hist_bin_21",
+      "vader_hist_bin_22",
+      "vader_hist_bin_23",
+      "vader_hist_entropy",
+      "vader_neg_tail_mass",
+      "vader_pos_tail_mass",
+      "vader_neutral_mass",
+      "participant_utterance_count"
+    ]
+  },
+  "default_feature_set": "paper_82",
+  "training": {
+    "train_splits": [
+      "train",
+      "dev"
+    ],
+    "test_splits": [
+      "test"
+    ],
+    "log_perplexity": true,
+    "clip_low": 0.005,
+    "clip_high": 0.995,
+    "add_missing_indicators": false,
+    "scaler": "maxabs",
+    "models": {
+      "paper_b0_rho05_vaderfull": {
+        "type": "target_logistic_regression",
+        "target_params": {
+          "Depression_label": {
+            "penalty": "l2",
+            "C": 0.02,
+            "class_weight": "balanced",
+            "solver": "liblinear",
+            "max_iter": 12000
+          },
+          "PTSD_label": {
+            "penalty": "l2",
+            "C": 0.005,
+            "class_weight": {
+              "0": 1.0,
+              "1": 3.2
+            },
+            "solver": "liblinear",
+            "max_iter": 12000
+          }
+        },
+        "fixed_thresholds": {
+          "Depression_label": 0.5320324848487864,
+          "PTSD_label": 0.5720423927420021
+        }
+      },
+      "normalised_basic": {
+        "type": "logistic_regression",
+        "params": {
+          "penalty": "l2",
+          "C": 1.0,
+          "class_weight": "balanced",
+          "solver": "liblinear",
+          "max_iter": 8000
+        }
+      }
+    }
+  },
+  "metrics": [
+    "f1_macro",
+    "f1_binary",
+    "accuracy",
+    "pr_auc",
+    "roc_auc"
+  ],
+  "bootstrap": {
+    "enabled": true,
+    "n_boot": 2000,
+    "alpha": 0.95
+  },
+  "paper_reference": {
+    "source": "partner_appendix_pack_2026-04-22/core_results/section3_en_selected_models.csv",
+    "family": "B0_rho05_vaderfull"
+  }
+}

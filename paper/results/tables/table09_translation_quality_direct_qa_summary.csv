@@ -1,0 +1,4 @@
+metric_or_diagnostic,value
+Cleaned E-DAIC EN-UA COMET-QE system score (reference-free),0.8337
+Adjudicated uniform-random review of translated corpus (1000 sampled segments from 31500),946 accept / 46 minor / 8 major
+Reviewer label agreement before adjudication (same sample),92.9%

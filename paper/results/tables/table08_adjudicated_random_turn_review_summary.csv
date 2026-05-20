@@ -1,0 +1,14 @@
+metric,value
+Population participant turns,9192
+Population participant segments in turns,31500
+Randomly sampled turns,1000
+Reviewed segments,3554
+Pre-adjudication raw agreement,99.606%
+Final clean participant segments,3542 (99.66%)
+Final interviewer-contamination segments,9 (0.25%)
+Final mixed/overlap segments,2 (0.06%)
+Final artifact/non-speech segments,1 (0.03%)
+Segments retained / removed / trimmed,3542 / 9 / 3
+Turns with any remove/trim action,9/1000 (0.9%)
+Turns with clear interviewer contamination,6/1000 (0.6%)
+Turns with any interviewer-origin text,8/1000 (0.8%)

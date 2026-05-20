@@ -1,0 +1,7 @@
+Participant,source_file,word_csv,turn_csv,summary_csv,n_word_rows,n_turn_rows
+ex001,paper/examples/transcripts/ex001.json,paper/examples/expected_outputs/words/words_ex001.csv,paper/examples/expected_outputs/turns/turns_ex001.csv,paper/examples/expected_outputs/summary/summary_ex001.csv,13,1
+ex002,paper/examples/transcripts/ex002.json,paper/examples/expected_outputs/words/words_ex002.csv,paper/examples/expected_outputs/turns/turns_ex002.csv,paper/examples/expected_outputs/summary/summary_ex002.csv,13,1
+ex003,paper/examples/transcripts/ex003.json,paper/examples/expected_outputs/words/words_ex003.csv,paper/examples/expected_outputs/turns/turns_ex003.csv,paper/examples/expected_outputs/summary/summary_ex003.csv,12,1
+ex004,paper/examples/transcripts/ex004.json,paper/examples/expected_outputs/words/words_ex004.csv,paper/examples/expected_outputs/turns/turns_ex004.csv,paper/examples/expected_outputs/summary/summary_ex004.csv,13,1
+ex005,paper/examples/transcripts/ex005.json,paper/examples/expected_outputs/words/words_ex005.csv,paper/examples/expected_outputs/turns/turns_ex005.csv,paper/examples/expected_outputs/summary/summary_ex005.csv,8,1
+ex006,paper/examples/transcripts/ex006.json,paper/examples/expected_outputs/words/words_ex006.csv,paper/examples/expected_outputs/turns/turns_ex006.csv,paper/examples/expected_outputs/summary/summary_ex006.csv,11,1

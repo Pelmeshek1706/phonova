@@ -63,6 +63,11 @@ granted by the Licensor.
 You may exercise the limited rights above only if all of the following
 conditions are met:
 
+Required Notice:
+Source: AIREST
+Copyright (c) 2026 The AIREST Authors
+Research use only; commercial use prohibited
+
 a. Attribution. You must preserve all copyright, authorship, attribution, and
 license notices in the Software and in any permitted internal copies.
 
@@ -113,7 +118,7 @@ permission.
 
 This license does not alter or replace the license terms of any Third-Party
 Materials. You are solely responsible for reviewing and complying with all
-third-party license terms. For clarity, the `openwillis/` subtree and any other
+third-party license terms. For clarity, the `phonova/` subtree and any other
 components carrying their own license notices remain governed by those separate
 terms.
 

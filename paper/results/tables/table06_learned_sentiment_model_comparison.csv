@@ -1,0 +1,4 @@
+model,accuracy,macro_f1,weighted_f1
+UkrRoBERTa (COSMUS),0.768,0.76,0.77
+XLM-R (Twitter),0.6712,0.66,0.67
+Multilingual-SA,0.4956,0.48,0.47

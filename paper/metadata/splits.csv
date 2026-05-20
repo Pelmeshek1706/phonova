@@ -1,0 +1,7 @@
+Participant,split,split_role
+ex001,train,model_development
+ex002,train,model_development
+ex003,dev,model_development
+ex004,dev,model_development
+ex005,test,held_out_evaluation
+ex006,test,held_out_evaluation

@@ -1,0 +1,9 @@
+split,target,n_participants,positive_cases,negative_cases,positive_pct,source
+train,Depression,163,37,126,0.22699386503067484,restricted E-DAIC aggregate label/split summary
+train,PTSD,163,49,114,0.3006134969325153,restricted E-DAIC aggregate label/split summary
+dev,Depression,56,12,44,0.21428571428571427,restricted E-DAIC aggregate label/split summary
+dev,PTSD,56,17,39,0.30357142857142855,restricted E-DAIC aggregate label/split summary
+test,Depression,56,17,39,0.30357142857142855,restricted E-DAIC aggregate label/split summary
+test,PTSD,56,21,35,0.375,restricted E-DAIC aggregate label/split summary
+all,Depression,275,66,209,0.24,restricted E-DAIC aggregate label/split summary
+all,PTSD,275,87,188,0.31636363636363635,restricted E-DAIC aggregate label/split summary

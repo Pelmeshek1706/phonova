@@ -1,0 +1,7 @@
+Participant,transcript_file,label_file,split,Depression_label,PTSD_label,Depression_severity,PTSD_severity,language,speaker_label,release_status,notes
+ex001,paper/examples/transcripts/ex001.json,paper/examples/labels.csv,train,0,0,1,0,en,participant,public_synthetic,Sanitized synthetic smoke-test transcript
+ex002,paper/examples/transcripts/ex002.json,paper/examples/labels.csv,train,1,0,4,1,en,participant,public_synthetic,Sanitized synthetic smoke-test transcript
+ex003,paper/examples/transcripts/ex003.json,paper/examples/labels.csv,dev,0,1,0,4,en,participant,public_synthetic,Sanitized synthetic smoke-test transcript
+ex004,paper/examples/transcripts/ex004.json,paper/examples/labels.csv,dev,1,1,5,5,en,participant,public_synthetic,Sanitized synthetic smoke-test transcript
+ex005,paper/examples/transcripts/ex005.json,paper/examples/labels.csv,test,0,0,1,1,en,participant,public_synthetic,Sanitized synthetic smoke-test transcript
+ex006,paper/examples/transcripts/ex006.json,paper/examples/labels.csv,test,1,1,4,4,en,participant,public_synthetic,Sanitized synthetic smoke-test transcript

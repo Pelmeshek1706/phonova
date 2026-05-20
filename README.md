@@ -121,7 +121,7 @@ The main model evaluated is **YShynkarov/ukr-roberta-cosmus-sentiment**, a fine-
 
 - **cardiffnlp/twitter-xlm-roberta-base-sentiment**  
 - **tabularisai/multilingual-sentiment-analysis**  
-- **Vader Sentiment via OpenWillis** *(texts translated from Ukrainian to English using Yehor/kulyk-uk-en)*
+- **Vader Sentiment via Phonova** *(texts translated from Ukrainian to English using Yehor/kulyk-uk-en)*
 
 ### Comparative Results Table
 
@@ -130,7 +130,7 @@ The main model evaluated is **YShynkarov/ukr-roberta-cosmus-sentiment**, a fine-
 | `YShynkarov/ukr-roberta-cosmus-sentiment`                     |   76.80% |    0.90 / 0.66 / 0.76 |   0.71 / 0.87 / 0.78 |    0.73 / 0.77 / 0.75 |     0.78 / 0.77 / 0.76 |             0.79 / 0.77 / 0.77 |
 | `cardiffnlp/twitter-xlm-roberta-base-sentiment`               |   67.12% |    0.75 / 0.60 / 0.67 |   0.60 / 0.81 / 0.69 |    0.79 / 0.52 / 0.63 |     0.71 / 0.65 / 0.66 |             0.70 / 0.67 / 0.67 |
 | `tabularisai/multilingual-sentiment-analysis`                 |   49.56% |    0.52 / 0.69 / 0.59 |   0.58 / 0.24 / 0.34 |    0.42 / 0.64 / 0.50 |     0.50 / 0.52 / 0.48 |             0.52 / 0.50 / 0.47 |
-| `Vader Sentiment (OpenWillis, uk-en translation)`             |   43.55% |    0.77 / 0.03 / 0.05 |   0.42 / 0.98 / 0.59 |    0.78 / 0.13 / 0.23 |     0.66 / 0.38 / 0.29 |             0.63 / 0.44 / 0.30 |
+| `Vader Sentiment (Phonova, uk-en translation)`             |   43.55% |    0.77 / 0.03 / 0.05 |   0.42 / 0.98 / 0.59 |    0.78 / 0.13 / 0.23 |     0.66 / 0.38 / 0.29 |             0.63 / 0.44 / 0.30 |
 
 ### Evaluation Methodology
 
@@ -138,7 +138,7 @@ The main model evaluated is **YShynkarov/ukr-roberta-cosmus-sentiment**, a fine-
 2. **Label encoding**: Textual labels ("negative", "neutral", "positive") were mapped to numerical values (-1, 0, +1).
 3. **Model initialization**: Pipelines for sentiment analysis were set up for each model using identical tokenization and inference parameters.
 4. **Predictions**: The sentiment category for each text entry was predicted using the respective model’s inference pipeline.
-5. **Vader Sentiment testing**: Due to the Vader Sentiment Analyzer supporting English input only, all texts were first translated from Ukrainian to English using the Yehor/kulyk-uk-en model, specifically fine-tuned for Ukrainian-English translation. After translation, texts were labeled using the Vader algorithm provided by OpenWillis.
+5. **Vader Sentiment testing**: Due to the Vader Sentiment Analyzer supporting English input only, all texts were first translated from Ukrainian to English using the Yehor/kulyk-uk-en model, specifically fine-tuned for Ukrainian-English translation. After translation, texts were labeled using the Vader algorithm provided by Phonova.
 6. **Metric computation**: Accuracy, precision, recall, and F1 scores were calculated for negative, neutral, and positive classes using sklearn metrics.
 7. **Result comparison**: Performance metrics were summarized in the comparative results table.
 
@@ -147,7 +147,7 @@ The main model evaluated is **YShynkarov/ukr-roberta-cosmus-sentiment**, a fine-
 ### Introduction
 
 As part of the AIREST project, we conducted an evaluation of part-of-speech (POS) tagging accuracy for the Ukrainian language.  
-The goal was to ensure that the **spaCy-uk** model used in OpenWillis achieves expert-level accuracy, comparable to manually annotated gold-standard data, and does not fall behind alternative solutions by more than the acceptable threshold.  
+The goal was to ensure that the **spaCy-uk** model used in Phonova achieves expert-level accuracy, comparable to manually annotated gold-standard data, and does not fall behind alternative solutions by more than the acceptable threshold.  
 
 ## UD_Ukrainian-ParlaMint Dataset Overview
 
@@ -162,7 +162,7 @@ The goal was to ensure that the **spaCy-uk** model used in OpenWillis achieves e
 ## Section 1.2 — POS Tagging Evaluation
 
 Two tools were evaluated:
-- **spaCy-uk** — a Universal Dependencies–based model integrated into OpenWillis for Ukrainian.  
+- **spaCy-uk** — a Universal Dependencies–based model integrated into Phonova for Ukrainian.  
 - **Stanza-uk** — an NLP library from Stanford NLP, trained on Ukrainian UD corpora, used here as a reference point.
 
 Evaluation methodology:
@@ -186,7 +186,7 @@ Evaluation methodology:
 Across all splits (dev, test, train), **spaCy-uk** demonstrates macro-F1 scores above 0.97 for UPOS tagging, consistently matching or nearly matching the performance of **Stanza-uk**.  
 The observed differences between the two models are within ±0.3 percentage points — well below the predefined 2 p.p. threshold.  
 
-This confirms that **spaCy-uk** maintains near-expert accuracy for POS tagging on Ukrainian, making it fully reliable for downstream features in OpenWillis that depend on POS counts (e.g., first-person pronoun percentage, noun–verb ratio, adjective density).  
+This confirms that **spaCy-uk** maintains near-expert accuracy for POS tagging on Ukrainian, making it fully reliable for downstream features in Phonova that depend on POS counts (e.g., first-person pronoun percentage, noun–verb ratio, adjective density).  
 Given these results, spaCy-uk can be confidently used as the primary POS tagging module for Ukrainian in production workflows without compromising accuracy compared to Stanza-uk.
 
 ## Section 1.3 — Tense Evaluation
@@ -583,7 +583,7 @@ By contrast, mixing an English-only BERT with mBERT can yield a stable cross-lan
 
 ## Goal
 
-Demonstrate that adapted OpenWillis features, after Ukrainian translation and feature extraction, retain their predictive utility for psychiatric outcomes — not just cross-lingual fidelity, but real-world clinical validity. This is done by assessing performance on both regression of symptom severity (PHQ-8, PCL-C) and binary diagnostic classification (depression/PTSD cases), and benchmarking Ukrainian against English.
+Demonstrate that adapted Phonova features, after Ukrainian translation and feature extraction, retain their predictive utility for psychiatric outcomes — not just cross-lingual fidelity, but real-world clinical validity. This is done by assessing performance on both regression of symptom severity (PHQ-8, PCL-C) and binary diagnostic classification (depression/PTSD cases), and benchmarking Ukrainian against English.
 
 ---
 
@@ -594,8 +594,8 @@ Demonstrate that adapted OpenWillis features, after Ukrainian translation and fe
   - **PCL-C** (PTSD, 17–85; binary cutoff ≥50)  
   - Audio (16 kHz), transcripts, acoustic, and visual features.
 - **Our approach**:  
-  - **English pipeline**: Original transcripts, OpenWillis features (incl. Gemma/bert/other as specified).
-  - **Ukrainian pipeline**: Transcripts translated turn-by-turn (Yehor/kulyk-en-uk), features extracted with Ukrainian-adapted OpenWillis stack (Gemma, multilingual BERT).
+  - **English pipeline**: Original transcripts, Phonova features (incl. Gemma/bert/other as specified).
+  - **Ukrainian pipeline**: Transcripts translated turn-by-turn (Yehor/kulyk-en-uk), features extracted with Ukrainian-adapted Phonova stack (Gemma, multilingual BERT).
 
 ---
 
@@ -722,6 +722,6 @@ Short description of table fields:
   - Gemma stack may be preferred for robust Ukrainian/English compatibility where cross-lingual consistency is required.
     
 - **Clinical implication:**  
-  - Downstream task performance on Ukrainian is robust and does **not** suffer >10% drop vs English — confirming the OpenWillis feature pipeline is linguistically and clinically valid after adaptation.
+  - Downstream task performance on Ukrainian is robust and does **not** suffer >10% drop vs English — confirming the Phonova feature pipeline is linguistically and clinically valid after adaptation.
 
 ---

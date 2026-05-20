@@ -1,0 +1,6 @@
+include README_DEV.md
+include requirements.txt
+include requirements-dev.txt
+recursive-include phonova/speech/config *.json
+recursive-include phonova/speech/util/data *.tsv
+recursive-include phonova/speech/util/speech *.tsv *.csv

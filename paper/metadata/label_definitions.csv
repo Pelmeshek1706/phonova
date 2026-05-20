@@ -1,0 +1,7 @@
+field,kind,allowed_values,definition,coding_notes
+Participant,identifier,ex001-ex006 in public examples,Synthetic participant identifier used to join transcripts labels and splits,Public examples use synthetic IDs only
+Depression_label,binary,"0,1",Case-control depression label used by paper models,0=control or non-case; 1=case
+PTSD_label,binary,"0,1",Case-control PTSD label used by paper models,0=control or non-case; 1=case
+Depression_severity,numeric,non-negative numeric severity score,Depression severity score used as metadata and descriptive outcome,Higher values indicate greater severity; public example values are synthetic
+PTSD_severity,numeric,non-negative numeric severity score,PTSD severity score used as metadata and descriptive outcome,Higher values indicate greater severity; public example values are synthetic
+split,categorical,"train,dev,test",Saved split assignment used by paper scripts,Train and dev are model-development splits; test is held out for final evaluation

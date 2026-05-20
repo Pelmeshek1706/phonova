@@ -1,0 +1,56 @@
+{
+  "Participant": "ex004",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 1.1,
+      "speaker": "interviewer",
+      "role": "interviewer",
+      "text": "How do memories affect you?",
+      "source_text_en": "How do memories affect you?",
+      "words": [
+        {"word": "How", "start": 0.0, "end": 0.1},
+        {"word": "do", "start": 0.1, "end": 0.2},
+        {"word": "memories", "start": 0.2, "end": 0.6},
+        {"word": "affect", "start": 0.6, "end": 0.9},
+        {"word": "you", "start": 0.9, "end": 1.1}
+      ]
+    },
+    {
+      "id": 1,
+      "start": 1.6,
+      "end": 3.2,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I avoid crowded rooms now.",
+      "source_text_en": "I avoid crowded rooms now.",
+      "words": [
+        {"word": "I", "start": 1.6, "end": 1.7},
+        {"word": "avoid", "start": 1.7, "end": 2.0},
+        {"word": "crowded", "start": 2.0, "end": 2.4},
+        {"word": "rooms", "start": 2.4, "end": 2.8},
+        {"word": "now", "start": 2.8, "end": 3.2}
+      ]
+    },
+    {
+      "id": 2,
+      "start": 4.0,
+      "end": 6.0,
+      "speaker": "participant",
+      "role": "participant",
+      "text": "I feel tense and I check every door.",
+      "source_text_en": "I feel tense and I check every door.",
+      "words": [
+        {"word": "I", "start": 4.0, "end": 4.1},
+        {"word": "feel", "start": 4.1, "end": 4.4},
+        {"word": "tense", "start": 4.4, "end": 4.7},
+        {"word": "and", "start": 4.7, "end": 4.8},
+        {"word": "I", "start": 4.8, "end": 4.9},
+        {"word": "check", "start": 4.9, "end": 5.2},
+        {"word": "every", "start": 5.2, "end": 5.6},
+        {"word": "door", "start": 5.6, "end": 6.0}
+      ]
+    }
+  ]
+}
